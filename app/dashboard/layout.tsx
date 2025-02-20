@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Bricolage_Grotesque } from "next/font/google";
+
 import "../globals.css";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 
-const inter = Inter({ subsets: ["latin"] });
+const bricolage_Grotesque = Bricolage_Grotesque({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "HabitBet",
@@ -20,7 +21,7 @@ export default function RootLayout({
     <SidebarProvider>
       <AppSidebar />
 
-      <main className={inter.className}>
+      <main className={bricolage_Grotesque.className}>
         <SidebarTrigger />
       </main>
 
