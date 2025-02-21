@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -36,6 +36,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { IconPicker } from "@/components/ui/icon-picker";
 import type { IconName } from "@/components/ui/icon-picker";
 import { ColorPicker } from "@/components/ui/color-picker";
+import { createHabit } from "@/app/dashboard/actions";
+import type { CreateHabitProps } from "@/app/dashboard/actions";
 
 export default function NewHabitDialog() {
   const [step, setStep] = useState(1);
@@ -53,6 +55,12 @@ export default function NewHabitDialog() {
     period: "week",
   });
   const [durationUnit, setDurationUnit] = useState("week");
+  const [startDate, setStartDate] = useState<Date | null>(new Date());
+  const [endDate, setEndDate] = useState<Date | null>(null);
+
+  useEffect(() => {
+    setEndDate(calculateEndDate());
+  }, [durationUnit, habitData.duration, startDate]);
 
   const isStepValid = () => {
     switch (step) {
@@ -80,22 +88,102 @@ export default function NewHabitDialog() {
           Number(habitData.duration) >= 1 &&
           Number(habitData.duration) <= maxDuration!
         );
+      case 5:
+        return startDate !== null && endDate !== null;
       default:
         return false;
     }
   };
 
-  const handleNext = () => {
-    if (step < 4) setStep(step + 1);
-    else {
+  const handleCreate = async () => {
+    let frequency_value: number;
+    let frequency_unit: string;
+
+    switch (habitData.frequency) {
+      case "daily":
+        frequency_value = 1;
+        frequency_unit = "day";
+        break;
+      case "3x-week":
+        frequency_value = 3;
+        frequency_unit = "week";
+        break;
+      case "5x-week":
+        frequency_value = 5;
+        frequency_unit = "week";
+        break;
+      case "weekly":
+        frequency_value = 1;
+        frequency_unit = "week";
+        break;
+      case "custom":
+        frequency_value = Number(customFrequency.times);
+        frequency_unit = customFrequency.period;
+        break;
+      default:
+        frequency_value = 1;
+        frequency_unit = "day";
+    }
+
+    const habitPayload: CreateHabitProps = {
+      name: habitData.name,
+      icon: selectedIcon!,
+      color: selectedColor,
+      frequency_value,
+      frequency_unit,
+      duration_value: Number(habitData.duration),
+      duration_unit: durationUnit,
+      stake_amount: Number(habitData.stake),
+      start_date: startDate!, // Aggiunto per includere la data di inizio
+      end_date: endDate!, // Aggiunto per includere la data di fine
+    };
+
+    try {
+      const { error } = await createHabit(habitPayload);
+      if (error) {
+        console.error("Error creating habit:", error);
+        // Qui potresti aggiungere una notifica di errore
+        return;
+      }
+
       triggerConfetti();
       setTimeout(() => setOpen(false), 2000);
+    } catch (error) {
+      console.error("Error creating habit:", error);
+      // Qui potresti aggiungere una notifica di errore
+    }
+  };
+
+  const handleNext = () => {
+    if (step < 5) {
+      setStep(step + 1);
+    } else {
+      handleCreate();
     }
   };
 
   const handleBack = () => {
     if (step > 1) setStep(step - 1);
   };
+
+  const calculateEndDate = () => {
+    if (!startDate || !habitData.duration) return null;
+
+    const durationValue = Number(habitData.duration);
+
+    let endDate = new Date(startDate);
+
+    if (durationUnit === "day") {
+      endDate.setDate(startDate.getDate() + durationValue);
+    } else if (durationUnit === "week") {
+      endDate.setDate(startDate.getDate() + durationValue * 7);
+    } else if (durationUnit === "month") {
+      endDate.setMonth(startDate.getMonth() + durationValue);
+    }
+
+    return endDate;
+  };
+
   const coinPath = confetti.shapeFromPath({
     path: "M16 4c-8.84 0-16 7.16-16 16s7.16 16 16 16 16-7.16 16-16-7.16-16-16-16zm0 28c-6.63 0-12-5.37-12-12s5.37-12 12-12 12 5.37 12 12-5.37 12-12 12zm2-17h-4v2h4v2h-3v2h3v2h-4v2h4c1.1 0 2-.9 2-2v-6c0-1.1-.9-2-2-2z",
   });
@@ -312,6 +400,33 @@ export default function NewHabitDialog() {
             </div>
           </motion.div>
         );
+      case 5: // Nuovo passo per la data di inizio
+        return (
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            className="space-y-6"
+          >
+            <div className="space-y-4">
+              <Label>When do you want to start?</Label>
+              <Input
+                type="date"
+                value={startDate?.toISOString().split("T")[0]}
+                onChange={(e) => {
+                  const date = new Date(e.target.value);
+                  setStartDate(date);
+                  setEndDate(calculateEndDate());
+                }}
+              />
+              {endDate && (
+                <p className="text-sm text-muted-foreground">
+                  End Date: {endDate.toLocaleDateString()}
+                </p>
+              )}
+            </div>
+          </motion.div>
+        );
     }
   };
 
@@ -326,7 +441,7 @@ export default function NewHabitDialog() {
         <DialogHeader>
           <DialogTitle>Create New Habit Bet</DialogTitle>
           <DialogDescription>
-            Step {step} of 4:{" "}
+            Step {step} of 5:{" "}
             {step === 1
               ? "Basic Info"
               : step === 2
@@ -346,7 +461,7 @@ export default function NewHabitDialog() {
             </Button>
           )}
           <Button onClick={handleNext} disabled={!isStepValid()}>
-            {step === 4 ? (
+            {step === 5 ? (
               "Create Habit"
             ) : (
               <>

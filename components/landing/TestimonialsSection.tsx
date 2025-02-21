@@ -44,11 +44,11 @@ export function TestimonialsSection({
   return (
     <section className="py-16 px-4 bg-gray-50">
       <div className="max-w-6xl mx-auto">
-        <h2 className="text-3xl font-bold text-center mb-2 text-gray-900">
+        <h2 className="text-4xl font-bold tracking-tight mb-4 text-center">
           Don't Just Take Our Word For It
         </h2>
-        <p className="text-center text-gray-600 mb-12">
-          Here's what our definitely real users have to say*
+        <p className="text-center text-xl text-muted-foreground max-w-2xl mx-auto mb-12">
+          See what real people are saying about HabitStake
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">

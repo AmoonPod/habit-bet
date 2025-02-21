@@ -14,9 +14,9 @@ interface HeroSectionProps {
 }
 
 export function HeroSection({
-  title = "Put Your Money Where Your Habits Are",
-  subtitle = "The world's first honor-system habit tracker. Start for free, only pay when you break your streak. Because real change comes from within.",
-  ctaText = "Start Building Habits",
+  title = "Earn Your Success. Stake Your Habits.",
+  subtitle = "The world's first honor-system habit tracker. Earn your success, one habit at a time. Start for free and only pay when you break your streak. Real change starts with you.",
+  ctaText = "Earn Your First Success",
   onCtaClick,
 }: HeroSectionProps) {
   const router = useRouter();
@@ -76,20 +76,20 @@ export function HeroSection({
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.4 }}
-            className="flex flex-col sm:flex-row gap-4 justify-center"
+            className="flex flex-col sm:flex-row gap-3 justify-center"
           >
             <Button
               size="lg"
               onClick={onCtaClick || handleCtaClick}
-              className="text-lg group bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
+              className="text-sm sm:text-lg group px-4 sm:px-6 group bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
             >
               {ctaText}
-              <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
+              <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5 transition-transform group-hover:translate-x-1" />
             </Button>
             <Button
               size="lg"
               variant="outline"
-              className="text-lg group"
+              className="text-sm sm:text-lg group px-4 sm:px-6 group"
               onClick={() =>
                 document
                   .getElementById("how-it-works")

@@ -50,7 +50,7 @@ export function Sidebar({
         <SheetContent side="left" className="p-0 w-64">
           <div className="h-full bg-card">
             <div className="p-4 h-14 border-b flex items-center">
-              <span className="font-semibold">HabitBet</span>
+              <span className="font-semibold">habitstake</span>
             </div>
             <SidebarContent />
           </div>
@@ -66,7 +66,7 @@ export function Sidebar({
         )}
       >
         <div className="h-14 border-b flex items-center justify-between px-4">
-          {!isCollapsed && <span className="font-semibold">HabitBet</span>}
+          {!isCollapsed && <span className="font-semibold">habitstake</span>}
           <Button
             variant="ghost"
             size="icon"

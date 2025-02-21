@@ -1,15 +1,11 @@
-import type { Metadata } from "next";
+import "../../globals.css";
+import { createClient } from "@/utils/supabase/server";
 import { Bricolage_Grotesque } from "next/font/google";
-import "./globals.css";
+import { redirect } from "next/navigation";
 
 const bricolage_Grotesque = Bricolage_Grotesque({ subsets: ["latin"] });
 
-export const metadata: Metadata = {
-  title: "habitstake",
-  description: "Build better habits through radical trust",
-};
-
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;

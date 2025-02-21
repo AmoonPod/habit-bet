@@ -44,7 +44,7 @@ export function Navbar() {
           <Button
             variant="default"
             className="text-sm"
-            onClick={() => router.push("/dashboard")}
+            onClick={() => router.push("/login")}
           >
             <LogIn className="mr-2 h-4 w-4" />
             Start Free

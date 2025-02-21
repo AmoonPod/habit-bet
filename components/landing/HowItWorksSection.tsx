@@ -5,27 +5,27 @@ import { ArrowRight, ShieldCheck, Coins, Target } from "lucide-react";
 const steps = [
   {
     icon: Target,
-    title: "Set Your Goal",
+    title: "1. Set Your Habit & Stake",
     description:
-      "Choose a habit and set your stakes. No upfront payment required.",
+      "Choose a habit you want to build and decide how much you'll stake. It's your commitment on the line!",
   },
   {
     icon: ShieldCheck,
-    title: "Honor System",
+    title: "2. Track Your Progress Daily",
     description:
-      "Check in daily on your progress. We trust you to be honest - that's part of the growth.",
+      "Check in each day to mark your success. Be honest with yourself – it's about personal growth!",
   },
   {
     icon: Coins,
-    title: "Win or Learn",
+    title: "3. Win or Learn (and Support Us)",
     description:
-      "Succeed? Pay nothing. Slip up? Your stake goes to charity or the community pool.",
+      "Hit your goal? Awesome, you pay nothing extra! Missed it? Your stake helps us keep HabitStake running.",
   },
   {
     icon: ArrowRight,
-    title: "Level Up",
+    title: "4. Build Lasting Habits (Free or Pro)",
     description:
-      "Build lasting habits while staying accountable. No subscriptions, just pure motivation.",
+      "Stay motivated and build lasting habits. Use HabitStake for free, or upgrade for advanced insights and AI!",
   },
 ];
 
@@ -40,7 +40,7 @@ export function HowItWorksSection() {
             transition={{ duration: 0.5 }}
             className="text-4xl font-bold tracking-tight mb-4"
           >
-            How HabitBet Works
+            How habitstake Works
           </motion.h2>
           <motion.p
             initial={{ opacity: 0, y: 20 }}
