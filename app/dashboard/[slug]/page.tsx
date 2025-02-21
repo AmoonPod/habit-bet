@@ -1,29 +1,5 @@
-import { Button } from "@/components/ui/button";
 import { getHabitBySlug, getStakeByUuid } from "../actions";
 import { Tables } from "@/supabase/models/database.types";
-import { ChevronLeft, EditIcon, Trash2 } from "lucide-react";
-import Link from "next/link";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { Card, CardContent } from "@/components/ui/card";
-import CheckInButton from "@/components/habit/CheckInButton";
 import HabitStats from "@/components/habit/HabitStats";
 import HabitCharts from "@/components/habit/HabitCharts";
 import CheckInSection from "@/components/habit/CheckInSection";
@@ -47,15 +23,10 @@ export default async function HabitPage({
   const totalSaved = 125;
   const nextCheckIn = new Date();
 
-  const handleCheckIn = () => {
-    // Implement your check-in logic here (e.g., update database)
-    console.log("Check-in confirmed!");
-  };
-
   return (
-    <div className="container mx-auto px-4 py-8 max-w-6xl">
+    <div className="container mx-auto px-4 py-8 ">
       <HabitHeader habit={habit} />
-      <CheckInSection habit={habit} stake={stake} />
+      <CheckInSection habit={habit} stakeAmount={stake.amount!} />
       <HabitStats
         currentStreak={currentStreak}
         completionRate={completionRate}

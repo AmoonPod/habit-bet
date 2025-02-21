@@ -35,7 +35,7 @@ const HabitStats: React.FC<HabitStatsProps> = ({
           value: `${completionRate}%`,
           icon: Target,
         },
-        { label: "Total Saved", value: `$${totalSaved}`, icon: Coins },
+        { label: "Potential Savings", value: `$${totalSaved}`, icon: Coins },
         {
           label: "Next Check-in",
           value: format(nextCheckIn, "MMM d"),
