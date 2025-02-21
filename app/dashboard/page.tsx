@@ -16,8 +16,6 @@ export default function DashboardPage() {
         <NewHabitDialog />
       </div>
 
-      <StatsGrid />
-
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <HabitCard />
         <HabitCard

@@ -8,6 +8,7 @@ import { HowItWorksSection } from "@/components/landing/HowItWorksSection";
 import { TestimonialsSection } from "@/components/landing/TestimonialsSection";
 import { FAQSection } from "@/components/landing/FAQSection";
 import { Button } from "@/components/ui/button";
+import { HabitStakeAnimatedList } from "@/components/landing/Notification";
 
 export default function Home() {
   return (

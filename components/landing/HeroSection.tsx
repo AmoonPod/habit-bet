@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { Button } from "../ui/button";
 import { ArrowRight, Coins, Target, ShieldCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { Squares } from "@/components/ui/squares-background";
 
 interface HeroSectionProps {
   title?: string;
@@ -26,23 +27,12 @@ export function HeroSection({
 
   return (
     <div className="relative min-h-[90vh] flex items-center justify-center overflow-hidden bg-background">
-      {/* Animated Background */}
-      <div className="absolute inset-0 -z-10">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent" />
-        <div className="absolute inset-0 opacity-[0.02] bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px]" />
-        <motion.div
-          initial={{ opacity: 0, scale: 0.5 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 1.5, ease: "easeOut" }}
-          className="absolute -top-1/2 -right-1/2 w-full h-full bg-gradient-to-br from-primary/10 to-transparent rounded-full blur-3xl"
-        />
-        <motion.div
-          initial={{ opacity: 0, scale: 0.5 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 1.5, delay: 0.2, ease: "easeOut" }}
-          className="absolute -bottom-1/2 -left-1/2 w-full h-full bg-gradient-to-tr from-violet-500/10 to-transparent rounded-full blur-3xl"
-        />
-      </div>
+      <Squares
+        direction="diagonal"
+        speed={0.2}
+        squareSize={40}
+        className="absolute inset-0"
+      />
 
       <div className="container px-4 mx-auto text-center relative z-10">
         <motion.div
@@ -110,7 +100,7 @@ export function HeroSection({
             </Button>
           </motion.div>
 
-          <motion.div
+          {/*  <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.5 }}
@@ -135,7 +125,7 @@ export function HeroSection({
                 </div>
               </motion.div>
             ))}
-          </motion.div>
+          </motion.div>*/}
         </motion.div>
       </div>
     </div>
