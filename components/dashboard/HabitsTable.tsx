@@ -1,12 +1,12 @@
 "use client";
 
 import { Tables } from "@/supabase/models/database.types";
-import HabitCard from "./HabitCard";
+import HabitTable from "./HabitTable";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
 
-interface HabitsProps {
+interface HabitsTableProps {
   habits: Tables<"habits">[];
   stakes: Record<string, Tables<"habit_stakes">>;
   checkins: Tables<"habit_checkins">[];
@@ -14,13 +14,13 @@ interface HabitsProps {
   totalPages: number;
 }
 
-export function Habits({
+export function HabitsTable({
   habits,
   stakes,
   checkins,
   currentPage,
   totalPages,
-}: HabitsProps) {
+}: HabitsTableProps) {
   const router = useRouter();
   const pathname = usePathname();
 
@@ -40,28 +40,12 @@ export function Habits({
     );
   }
 
+  // Converti l'oggetto stakes in un array per il componente HabitTable
+  const stakesArray = Object.values(stakes);
+
   return (
     <div className="space-y-4">
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {habits.map((habit) => {
-          // Get the stake corresponding to the habit
-          const stake = stakes[habit.stake_uuid || ""] || { amount: 0 };
-
-          // Get check-ins for this habit
-          const habitCheckins = checkins.filter(
-            (checkin) => checkin.habit_uuid === habit.uuid
-          );
-
-          return (
-            <HabitCard
-              key={habit.uuid}
-              habit={habit}
-              stake={stake}
-              checkins={habitCheckins}
-            />
-          );
-        })}
-      </div>
+      <HabitTable habits={habits} stakes={stakesArray} checkins={checkins} />
 
       {/* Pagination */}
       {totalPages > 1 && (

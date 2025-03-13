@@ -22,6 +22,7 @@ import {
   Dumbbell,
   ArrowRight,
   ArrowLeft,
+  Info,
 } from "lucide-react";
 import { Icon } from "@/components/ui/icon";
 import {
@@ -38,8 +39,21 @@ import type { IconName } from "@/components/ui/icon-picker";
 import { ColorPicker } from "@/components/ui/color-picker";
 import { createHabit } from "@/app/dashboard/actions";
 import type { CreateHabitProps } from "@/app/dashboard/actions";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
-export default function NewHabitDialog() {
+export default function NewHabitDialog({
+  open,
+  onOpenChange,
+}: {
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}) {
   const [step, setStep] = useState(1);
   const [selectedIcon, setSelectedIcon] = useState<IconName | null>(null);
   const [selectedColor, setSelectedColor] = useState("#4F46E5");
@@ -49,7 +63,7 @@ export default function NewHabitDialog() {
     stake: "",
     duration: "",
   });
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
   const [customFrequency, setCustomFrequency] = useState({
     times: "",
     period: "week",
@@ -57,6 +71,17 @@ export default function NewHabitDialog() {
   const [durationUnit, setDurationUnit] = useState("week");
   const [startDate, setStartDate] = useState<Date | null>(new Date());
   const [endDate, setEndDate] = useState<Date | null>(null);
+  const [verificationType, setVerificationType] = useState("honor");
+
+  // Use either controlled or uncontrolled open state
+  const isOpen = open !== undefined ? open : internalOpen;
+  const setIsOpen = (value: boolean) => {
+    if (onOpenChange) {
+      onOpenChange(value);
+    } else {
+      setInternalOpen(value);
+    }
+  };
 
   useEffect(() => {
     setEndDate(calculateEndDate());
@@ -89,7 +114,7 @@ export default function NewHabitDialog() {
           Number(habitData.duration) <= maxDuration!
         );
       case 5:
-        return startDate !== null && endDate !== null;
+        return startDate !== null && endDate !== null && verificationType;
       default:
         return false;
     }
@@ -134,8 +159,9 @@ export default function NewHabitDialog() {
       duration_value: Number(habitData.duration),
       duration_unit: durationUnit,
       stake_amount: Number(habitData.stake),
-      start_date: startDate!, // Aggiunto per includere la data di inizio
-      end_date: endDate!, // Aggiunto per includere la data di fine
+      start_date: startDate!,
+      end_date: endDate!,
+      verification_type: verificationType,
     };
 
     try {
@@ -147,7 +173,7 @@ export default function NewHabitDialog() {
       }
 
       triggerConfetti();
-      setTimeout(() => setOpen(false), 2000);
+      setTimeout(() => setIsOpen(false), 2000);
     } catch (error) {
       console.error("Error creating habit:", error);
       // Qui potresti aggiungere una notifica di errore
@@ -400,7 +426,7 @@ export default function NewHabitDialog() {
             </div>
           </motion.div>
         );
-      case 5: // Nuovo passo per la data di inizio
+      case 5:
         return (
           <motion.div
             initial={{ opacity: 0, x: 20 }}
@@ -409,21 +435,84 @@ export default function NewHabitDialog() {
             className="space-y-6"
           >
             <div className="space-y-4">
-              <Label>When do you want to start?</Label>
-              <Input
-                type="date"
-                value={startDate?.toISOString().split("T")[0]}
-                onChange={(e) => {
-                  const date = new Date(e.target.value);
-                  setStartDate(date);
-                  setEndDate(calculateEndDate());
-                }}
-              />
-              {endDate && (
-                <p className="text-sm text-muted-foreground">
-                  End Date: {endDate.toLocaleDateString()}
-                </p>
-              )}
+              <div className="flex items-center gap-2">
+                <Label>Verification Method</Label>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-sm">
+                      <p>
+                        Choose how you want to verify your habit completion:
+                      </p>
+                      <ul className="list-disc pl-4 mt-2 space-y-1">
+                        <li>
+                          <strong>Honor System</strong>: Just confirm you did it
+                        </li>
+                        <li>
+                          <strong>Photo Proof</strong>: Upload a photo as
+                          evidence
+                        </li>
+                        <li>
+                          <strong>Text Description</strong>: Describe how you
+                          completed it
+                        </li>
+                      </ul>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+
+              <RadioGroup
+                value={verificationType}
+                onValueChange={setVerificationType}
+                className="space-y-3"
+              >
+                <div className="flex items-center space-x-2 border p-3 rounded-md">
+                  <RadioGroupItem value="honor" id="honor" />
+                  <Label htmlFor="honor" className="font-medium">
+                    Honor System
+                  </Label>
+                  <p className="text-sm text-muted-foreground ml-6">
+                    Simply confirm that you've completed your habit
+                  </p>
+                </div>
+
+                <div className="flex items-center space-x-2 border p-3 rounded-md">
+                  <RadioGroupItem value="photo" id="photo" />
+                  <Label htmlFor="photo" className="font-medium">
+                    Photo Proof
+                  </Label>
+                  <p className="text-sm text-muted-foreground ml-6">
+                    Upload a photo as evidence of completion
+                  </p>
+                </div>
+
+                <div className="flex items-center space-x-2 border p-3 rounded-md">
+                  <RadioGroupItem value="text" id="text" />
+                  <Label htmlFor="text" className="font-medium">
+                    Text Description
+                  </Label>
+                  <p className="text-sm text-muted-foreground ml-6">
+                    Provide a written description of how you completed the habit
+                  </p>
+                </div>
+              </RadioGroup>
+            </div>
+
+            <div className="space-y-4">
+              <Label>Start Date</Label>
+              <div className="text-sm text-muted-foreground">
+                {startDate ? startDate.toLocaleDateString() : "Not set"}
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <Label>End Date (Calculated)</Label>
+              <div className="text-sm text-muted-foreground">
+                {endDate ? endDate.toLocaleDateString() : "Not set"}
+              </div>
             </div>
           </motion.div>
         );
@@ -431,7 +520,7 @@ export default function NewHabitDialog() {
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <Button>
           <Plus className="mr-2 h-4 w-4" /> New Habit Bet

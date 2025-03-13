@@ -2,19 +2,19 @@
 
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CalendarIcon, Coins, Target, Trophy } from "lucide-react";
+import { CalendarIcon, AlertTriangle, Target, Trophy } from "lucide-react";
 
 interface HabitStatsProps {
   currentStreak: number;
   completionRate: number;
-  totalSaved: number;
+  currentRisk: number;
   nextCheckIn: Date;
 }
 
 const HabitStats: React.FC<HabitStatsProps> = ({
   currentStreak,
   completionRate,
-  totalSaved,
+  currentRisk,
   nextCheckIn,
 }) => {
   const format = (date: Date, formatString: string) => {
@@ -23,7 +23,7 @@ const HabitStats: React.FC<HabitStatsProps> = ({
       month: "short",
       day: "numeric",
     };
-    return new Date(date).toLocaleDateString(undefined, options);
+    return new Date(date).toLocaleDateString("en-US", options);
   };
 
   return (
@@ -35,7 +35,11 @@ const HabitStats: React.FC<HabitStatsProps> = ({
           value: `${completionRate}%`,
           icon: Target,
         },
-        { label: "Potential Savings", value: `$${totalSaved}`, icon: Coins },
+        {
+          label: "Current Risk",
+          value: `$${currentRisk}`,
+          icon: AlertTriangle,
+        },
         {
           label: "Next Check-in",
           value: format(nextCheckIn, "MMM d"),

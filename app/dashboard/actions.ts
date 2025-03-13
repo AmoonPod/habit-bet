@@ -13,6 +13,7 @@ export interface CreateHabitProps {
     stake_amount: number;
     start_date: Date;
     end_date: Date;
+    verification_type: string; // "honor", "photo", o "text"
 }
 export async function createHabit(props: CreateHabitProps) {
     const supabase = await createClient();
@@ -49,7 +50,10 @@ export async function createHabit(props: CreateHabitProps) {
         frequency_unit: props.frequency_unit,
         duration_value: props.duration_value,
         duration_unit: props.duration_unit,
+        verification_type: props.verification_type,
         slug: props.name.toLowerCase().replace(/\s/g, "-"),
+        start_date: props.start_date.toISOString(),
+        end_date: props.end_date.toISOString(),
     });
 
     if (error) {
@@ -94,4 +98,29 @@ export async function getStakeByUuid(uuid: string) {
         throw error;
     }
     return data;
+}
+
+export async function getHabitCheckins() {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+        .from("habit_checkins")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+    if (error) {
+        throw error;
+    }
+    return data || [];
+}
+
+export async function getAllStakes() {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+        .from("habit_stakes")
+        .select("*");
+
+    if (error) {
+        throw error;
+    }
+    return data || [];
 }
