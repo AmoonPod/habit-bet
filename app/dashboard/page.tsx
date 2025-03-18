@@ -1,8 +1,10 @@
 "use server";
 import HabitHeatmap from "@/components/dashboard/HabitHeatmap";
 import { HabitsTable } from "@/components/dashboard/HabitsTable";
-import { Target, Plus } from "lucide-react";
-import { getHabits, getHabitCheckins, getAllStakes } from "./actions";
+import FailedHabitsSection from "@/components/dashboard/FailedHabitsSection";
+import FailedHabitsStats from "@/components/dashboard/FailedHabitsStats";
+import { Target, Plus, XCircle } from "lucide-react";
+import { getHabits, getHabitCheckins, getAllStakes, getHabitPayments } from "./actions";
 import DashboardFilters from "@/components/dashboard/DashboardFilters";
 import DashboardSummary from "@/components/dashboard/DashboardSummary";
 import { Tables } from "@/supabase/models/database.types";
@@ -61,6 +63,9 @@ export default async function HabitsPage({
   // Retrieve all stakes
   const allStakes = await getAllStakes();
 
+  // Retrieve all habit payments
+  const payments = await getHabitPayments();
+
   // Create an object with stakes indexed by uuid
   const stakesMap: Record<string, Tables<"habit_stakes">> = {};
   allStakes.forEach((stake: Tables<"habit_stakes">) => {
@@ -69,8 +74,12 @@ export default async function HabitsPage({
     }
   });
 
-  // Filter and sort habits based on parameters
-  let filteredHabits = [...habits];
+  // Separate active and failed habits
+  const activeHabits = habits.filter(habit => habit.status !== "failed");
+  const failedHabits = habits.filter(habit => habit.status === "failed");
+
+  // Filter and sort active habits based on parameters
+  let filteredHabits = [...activeHabits];
 
   // Apply filters
   if (filter === "active") {
@@ -153,7 +162,7 @@ export default async function HabitsPage({
         <DashboardSummary habits={habits} checkins={checkins} />
       </div>
 
-      {/* Habits in table format */}
+      {/* Active habits in table format */}
       <div className="mb-8">
         <HabitsTable
           habits={paginatedHabits as Tables<"habits">[]}
@@ -163,6 +172,34 @@ export default async function HabitsPage({
           totalPages={totalPages}
         />
       </div>
+
+      {/* Failed habits section */}
+      {failedHabits.length > 0 && (
+        <div className="space-y-6 mb-8">
+          <div className="border-t border-gray-200 dark:border-gray-800 pt-8 mt-8">
+            <h2 className="text-xl font-semibold mb-6 text-red-600 dark:text-red-400 flex items-center">
+              <XCircle className="h-5 w-5 mr-2" />
+              Failed Habits
+            </h2>
+
+            {/* Failed habits stats */}
+            <div className="mb-4">
+              <FailedHabitsStats
+                habits={failedHabits}
+                stakes={stakesMap}
+                payments={payments}
+              />
+            </div>
+
+            {/* Failed habits table */}
+            <FailedHabitsSection
+              habits={failedHabits}
+              stakes={stakesMap}
+              payments={payments}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Charts only if there's enough data */}
       {habits.length > 0 && checkins.length > 0 && (

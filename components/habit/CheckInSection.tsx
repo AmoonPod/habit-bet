@@ -48,15 +48,16 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
+import FailedHabitPayment from "./FailedHabitPayment";
 
 interface CheckInSectionProps {
   habit: Tables<"habits">;
-  stakeAmount: number;
+  stake: Tables<"habit_stakes">;
 }
 
 const CheckInSection: React.FC<CheckInSectionProps> = ({
   habit,
-  stakeAmount,
+  stake,
 }) => {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -69,8 +70,7 @@ const CheckInSection: React.FC<CheckInSectionProps> = ({
   const [forfeitMessage, setForfeitMessage] = useState<string | null>(null);
   const [proofContent, setProofContent] = useState<string>("");
   const [photoFile, setPhotoFile] = useState<File | null>(null);
-  const [isSubmittingSuccess, setIsSubmittingSuccess] = useState(false);
-  const [isSubmittingFailure, setIsSubmittingFailure] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [checkInsRemaining, setCheckInsRemaining] = useState<number | null>(
     null
   );
@@ -82,113 +82,121 @@ const CheckInSection: React.FC<CheckInSectionProps> = ({
   // Get verification type from habit
   const verificationType = habit.verification_type || "honor";
 
+  // Check if habit is failed
+  const isFailed = habit.status === "failed";
+
   useEffect(() => {
-    // Check how many check-ins the user has already done in the current period
-    const checkExistingCheckIns = async () => {
-      setIsLoadingCheckIns(true);
-      try {
-        const supabase = createClient();
-        const now = new Date();
-        let startDate, endDate;
+    // Only run these effects if the habit is not failed
+    if (!isFailed) {
+      // Check how many check-ins the user has already done in the current period
+      const checkExistingCheckIns = async () => {
+        setIsLoadingCheckIns(true);
+        try {
+          const supabase = createClient();
+          const now = new Date();
+          let startDate, endDate;
+
+          if (habit.frequency_unit === "day") {
+            startDate = startOfDay(now);
+            endDate = endOfDay(now);
+          } else if (habit.frequency_unit === "week") {
+            startDate = startOfWeek(now, { weekStartsOn: 1 }); // Start week on Monday
+            endDate = endOfWeek(now, { weekStartsOn: 1 });
+          } else {
+            // month
+            startDate = startOfMonth(now);
+            endDate = endOfMonth(now);
+          }
+
+          // Get existing check-ins for this period
+          const { data: existingCheckins, error } = await supabase
+            .from("habit_checkins")
+            .select("*")
+            .eq("habit_uuid", habit.uuid!)
+            .gte("created_at", startDate.toISOString())
+            .lte("created_at", endDate.toISOString());
+
+          if (error) {
+            console.error("Error fetching existing check-ins:", error);
+            return;
+          }
+
+          const frequencyValue = habit.frequency_value || 1;
+          const remaining = Math.max(
+            0,
+            frequencyValue - (existingCheckins?.length || 0)
+          );
+          setCheckInsRemaining(remaining);
+
+          // Update check-in availability based on remaining check-ins
+          setIsCheckInAvailable((prevState) => prevState && remaining > 0);
+        } catch (error) {
+          console.error("Error checking existing check-ins:", error);
+        } finally {
+          setIsLoadingCheckIns(false);
+        }
+      };
+
+      if (habit.uuid) {
+        checkExistingCheckIns();
+      }
+    }
+  }, [habit.uuid, habit.frequency_unit, habit.frequency_value, isFailed]);
+
+  useEffect(() => {
+    // Only run these effects if the habit is not failed
+    if (!isFailed) {
+      // Calculate the next check-in date based on the habit's frequency
+      const calculateNextCheckIn = () => {
+        const today = new Date();
+        let nextCheckIn: Date;
 
         if (habit.frequency_unit === "day") {
-          startDate = startOfDay(now);
-          endDate = endOfDay(now);
+          nextCheckIn = today; // Check in today
         } else if (habit.frequency_unit === "week") {
-          startDate = startOfWeek(now, { weekStartsOn: 1 }); // Start week on Monday
-          endDate = endOfWeek(now, { weekStartsOn: 1 });
+          // Assuming the week starts on Monday
+          const currentWeekStart = startOfWeek(today, { weekStartsOn: 1 });
+          const currentWeekEnd = endOfWeek(today, { weekStartsOn: 1 });
+
+          if (
+            isWithinInterval(today, {
+              start: currentWeekStart,
+              end: currentWeekEnd,
+            })
+          ) {
+            nextCheckIn = currentWeekStart; // Check in this week
+          } else {
+            const daysUntilNextCheckIn = (7 - today.getDay() + 1) % 7;
+            nextCheckIn = addDays(today, daysUntilNextCheckIn);
+          }
         } else {
-          // month
-          startDate = startOfMonth(now);
-          endDate = endOfMonth(now);
+          // Monthly
+          const firstDayOfMonth = new Date(
+            today.getFullYear(),
+            today.getMonth(),
+            1
+          );
+          const lastDayOfMonth = new Date(
+            today.getFullYear(),
+            today.getMonth() + 1,
+            0
+          );
+
+          if (
+            isWithinInterval(today, {
+              start: firstDayOfMonth,
+              end: lastDayOfMonth,
+            })
+          ) {
+            nextCheckIn = firstDayOfMonth; // Check in this month
+          } else {
+            nextCheckIn = addMonths(firstDayOfMonth, 1);
+          }
         }
 
-        // Get existing check-ins for this period
-        const { data: existingCheckins, error } = await supabase
-          .from("habit_checkins")
-          .select("*")
-          .eq("habit_uuid", habit.uuid!)
-          .gte("created_at", startDate.toISOString())
-          .lte("created_at", endDate.toISOString());
-
-        if (error) {
-          console.error("Error fetching existing check-ins:", error);
-          return;
-        }
-
-        const frequencyValue = habit.frequency_value || 1;
-        const remaining = Math.max(
-          0,
-          frequencyValue - (existingCheckins?.length || 0)
-        );
-        setCheckInsRemaining(remaining);
-
-        // Update check-in availability based on remaining check-ins
-        setIsCheckInAvailable((prevState) => prevState && remaining > 0);
-      } catch (error) {
-        console.error("Error checking existing check-ins:", error);
-      } finally {
-        setIsLoadingCheckIns(false);
-      }
-    };
-
-    if (habit.uuid) {
-      checkExistingCheckIns();
-    }
-  }, [habit.uuid, habit.frequency_unit, habit.frequency_value]);
-
-  useEffect(() => {
-    // Calculate the next check-in date based on the habit's frequency
-    const calculateNextCheckIn = () => {
-      const today = new Date();
-      let nextCheckIn: Date;
-
-      if (habit.frequency_unit === "day") {
-        nextCheckIn = today; // Check in today
-      } else if (habit.frequency_unit === "week") {
-        // Assuming the week starts on Monday
-        const currentWeekStart = startOfWeek(today, { weekStartsOn: 1 });
-        const currentWeekEnd = endOfWeek(today, { weekStartsOn: 1 });
-
-        if (
-          isWithinInterval(today, {
-            start: currentWeekStart,
-            end: currentWeekEnd,
-          })
-        ) {
-          nextCheckIn = currentWeekStart; // Check in this week
-        } else {
-          const daysUntilNextCheckIn = (7 - today.getDay() + 1) % 7;
-          nextCheckIn = addDays(today, daysUntilNextCheckIn);
-        }
-      } else {
-        // Monthly
-        const firstDayOfMonth = new Date(
-          today.getFullYear(),
-          today.getMonth(),
-          1
-        );
-        const lastDayOfMonth = new Date(
-          today.getFullYear(),
-          today.getMonth() + 1,
-          0
-        );
-
-        if (
-          isWithinInterval(today, {
-            start: firstDayOfMonth,
-            end: lastDayOfMonth,
-          })
-        ) {
-          nextCheckIn = firstDayOfMonth; // Check in this month
-        } else {
-          nextCheckIn = addMonths(firstDayOfMonth, 1);
-        }
-      }
-
-      setCheckInDate(nextCheckIn);
-      setIsCheckInAvailable(
-        isToday(nextCheckIn) ||
+        setCheckInDate(nextCheckIn);
+        setIsCheckInAvailable(
+          isToday(nextCheckIn) ||
           (habit.frequency_unit === "week" &&
             isWithinInterval(today, {
               start: startOfWeek(nextCheckIn, { weekStartsOn: 1 }),
@@ -199,51 +207,55 @@ const CheckInSection: React.FC<CheckInSectionProps> = ({
               start: startOfMonth(nextCheckIn),
               end: endOfMonth(nextCheckIn),
             }))
-      );
-    };
+        );
+      };
 
-    calculateNextCheckIn();
-  }, [habit]);
+      calculateNextCheckIn();
+    }
+  }, [habit, isFailed]);
 
   useEffect(() => {
-    // Check for missed check-ins (for daily habits only)
-    const checkMissedCheckIns = async () => {
-      if (habit.frequency_unit !== "day") return;
+    // Only run these effects if the habit is not failed
+    if (!isFailed) {
+      // Check for missed check-ins (for daily habits only)
+      const checkMissedCheckIns = async () => {
+        if (habit.frequency_unit !== "day") return;
 
-      try {
-        const supabase = createClient();
-        const yesterday = subDays(new Date(), 1);
-        const startOfYesterday = startOfDay(yesterday);
-        const endOfYesterday = endOfDay(yesterday);
+        try {
+          const supabase = createClient();
+          const yesterday = subDays(new Date(), 1);
+          const startOfYesterday = startOfDay(yesterday);
+          const endOfYesterday = endOfDay(yesterday);
 
-        // Check if there was a check-in yesterday
-        const { data: yesterdayCheckins, error } = await supabase
-          .from("habit_checkins")
-          .select("*")
-          .eq("habit_uuid", habit.uuid!)
-          .gte("created_at", startOfYesterday.toISOString())
-          .lte("created_at", endOfYesterday.toISOString());
+          // Check if there was a check-in yesterday
+          const { data: yesterdayCheckins, error } = await supabase
+            .from("habit_checkins")
+            .select("*")
+            .eq("habit_uuid", habit.uuid!)
+            .gte("created_at", startOfYesterday.toISOString())
+            .lte("created_at", endOfYesterday.toISOString());
 
-        if (error) {
+          if (error) {
+            console.error("Error checking missed check-ins:", error);
+            return;
+          }
+
+          // If no check-ins yesterday, set missed check-in
+          if (!yesterdayCheckins || yesterdayCheckins.length === 0) {
+            setMissedCheckIn(yesterday);
+          } else {
+            setMissedCheckIn(null);
+          }
+        } catch (error) {
           console.error("Error checking missed check-ins:", error);
-          return;
         }
+      };
 
-        // If no check-ins yesterday, set missed check-in
-        if (!yesterdayCheckins || yesterdayCheckins.length === 0) {
-          setMissedCheckIn(yesterday);
-        } else {
-          setMissedCheckIn(null);
-        }
-      } catch (error) {
-        console.error("Error checking missed check-ins:", error);
+      if (habit.uuid && habit.frequency_unit === "day") {
+        checkMissedCheckIns();
       }
-    };
-
-    if (habit.uuid && habit.frequency_unit === "day") {
-      checkMissedCheckIns();
     }
-  }, [habit.uuid, habit.frequency_unit]);
+  }, [habit.uuid, habit.frequency_unit, isFailed]);
 
   const getNextCheckInMessage = () => {
     if (!checkInDate) return "";
@@ -262,39 +274,64 @@ const CheckInSection: React.FC<CheckInSectionProps> = ({
   };
 
   const handleConfirmCheckIn = async (completed: boolean) => {
-    // Set the appropriate loading state based on which button was clicked
-    if (completed) {
-      setIsSubmittingSuccess(true);
-    } else {
-      setIsSubmittingFailure(true);
-    }
+    setIsSubmitting(true);
 
     try {
       // Handle different verification types
       let result;
 
       if (verificationType === "photo" && completed && photoFile) {
-        // For photo verification, pass the file to the server action
-        result = await checkInHabit(habit.uuid!, completed, "", photoFile);
+        result = await checkInHabit(
+          habit.uuid!,
+          completed,
+          "",
+          photoFile,
+          new Date(),
+          false // isMissedCheckIn
+        );
       } else if (verificationType === "text" && completed) {
-        // For text verification, pass the text content
-        result = await checkInHabit(habit.uuid!, completed, proofContent);
+        result = await checkInHabit(
+          habit.uuid!,
+          completed,
+          proofContent,
+          undefined,
+          new Date(),
+          false // isMissedCheckIn
+        );
       } else {
-        // For honor system or failed check-ins
-        result = await checkInHabit(habit.uuid!, completed);
+        result = await checkInHabit(
+          habit.uuid!,
+          completed,
+          undefined,
+          undefined,
+          new Date(),
+          false // isMissedCheckIn
+        );
       }
 
       if (result.success) {
         setIsCheckInDialogOpen(false);
 
-        // Handle success or failure dialogs
         if (completed) {
-          setShowSuccessDialog(true);
+          toast({
+            title: "Check-in successful!",
+            description: "Your check-in has been recorded. Keep up the good work!",
+            variant: "default",
+          });
         } else {
-          // For failed check-ins, show the failure dialog with forfeiture info
-          setForfeitAmount(result.forfeitAmount || 0);
-          setForfeitMessage(result.message || null);
-          setShowFailureDialog(true);
+          // If the habit failed due to user admitting failure
+          // Close the dialog
+          setShowFailureDialog(false);
+
+          // Just refresh the current page to show the updated UI
+          router.refresh();
+
+          // Show a toast notification
+          toast({
+            title: "Habit Failed",
+            description: result.message || "Your habit has been marked as failed. Please complete the payment.",
+            variant: "destructive",
+          });
         }
 
         // Reset proof fields
@@ -303,22 +340,11 @@ const CheckInSection: React.FC<CheckInSectionProps> = ({
         if (fileInputRef.current) {
           fileInputRef.current.value = "";
         }
-
-        // Update remaining check-ins
-        if (checkInsRemaining !== null) {
-          setCheckInsRemaining(Math.max(0, checkInsRemaining - 1));
-          if (checkInsRemaining - 1 <= 0) {
-            setIsCheckInAvailable(false);
-          }
-        }
-
-        // Refresh the page data
-        router.refresh();
       } else {
         toast({
           title: "Error",
           description:
-            result.message || "Failed to check in. Please try again.",
+            result.message || "Failed to record check-in. Please try again.",
           variant: "destructive",
         });
       }
@@ -326,13 +352,11 @@ const CheckInSection: React.FC<CheckInSectionProps> = ({
       console.error("Error during check-in:", error);
       toast({
         title: "Error",
-        description: "Failed to check in. Please try again.",
+        description: "Failed to record check-in. Please try again.",
         variant: "destructive",
       });
     } finally {
-      // Reset both loading states
-      setIsSubmittingSuccess(false);
-      setIsSubmittingFailure(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -351,7 +375,8 @@ const CheckInSection: React.FC<CheckInSectionProps> = ({
           completed,
           "",
           photoFile,
-          missedCheckIn
+          missedCheckIn,
+          true
         );
       } else if (verificationType === "text" && completed) {
         result = await checkInHabit(
@@ -359,7 +384,8 @@ const CheckInSection: React.FC<CheckInSectionProps> = ({
           completed,
           proofContent,
           undefined,
-          missedCheckIn
+          missedCheckIn,
+          true
         );
       } else {
         result = await checkInHabit(
@@ -367,7 +393,8 @@ const CheckInSection: React.FC<CheckInSectionProps> = ({
           completed,
           undefined,
           undefined,
-          missedCheckIn
+          missedCheckIn,
+          true
         );
       }
 
@@ -384,13 +411,18 @@ const CheckInSection: React.FC<CheckInSectionProps> = ({
             variant: "default",
           });
         } else {
+          // If the habit failed due to missed check-in
+          // Close the dialog
+          setShowFailureDialog(false);
+
+          // Just refresh the current page to show the updated UI
+          router.refresh();
+
+          // Show a toast notification
           toast({
-            title: "Check-in recorded",
-            description: `Your missed check-in for ${format(
-              missedCheckIn,
-              "MMMM d"
-            )} has been recorded.`,
-            variant: "default",
+            title: "Habit Failed",
+            description: result.message || "Your habit has been marked as failed due to missed check-in. Please complete the payment.",
+            variant: "destructive",
           });
         }
 
@@ -403,9 +435,6 @@ const CheckInSection: React.FC<CheckInSectionProps> = ({
 
         // Reset missed check-in
         setMissedCheckIn(null);
-
-        // Refresh the page data
-        router.refresh();
       } else {
         toast({
           title: "Error",
@@ -437,21 +466,19 @@ const CheckInSection: React.FC<CheckInSectionProps> = ({
       // Assuming the week starts on Monday
       const startOfWeekDate = startOfWeek(new Date(), { weekStartsOn: 1 });
       const endOfWeekDate = endOfWeek(new Date(), { weekStartsOn: 1 });
-      return `Did you complete your habit at least ${
-        habit.frequency_value
-      } times this week (starting ${format(
-        startOfWeekDate,
-        "MMMM d"
-      )}, ending ${format(endOfWeekDate, "MMMM d")})?`;
+      return `Did you complete your habit at least ${habit.frequency_value
+        } times this week (starting ${format(
+          startOfWeekDate,
+          "MMMM d"
+        )}, ending ${format(endOfWeekDate, "MMMM d")})?`;
     } else {
       const firstDayOfMonth = new Date(
         new Date().getFullYear(),
         new Date().getMonth(),
         1
       );
-      return `Did you complete your habit at least ${
-        habit.frequency_value
-      } times this month (${format(firstDayOfMonth, "MMMM")})?`;
+      return `Did you complete your habit at least ${habit.frequency_value
+        } times this month (${format(firstDayOfMonth, "MMMM")})?`;
     }
   };
 
@@ -542,8 +569,7 @@ const CheckInSection: React.FC<CheckInSectionProps> = ({
       // Reset form state
       setProofContent("");
       setPhotoFile(null);
-      setIsSubmittingSuccess(false);
-      setIsSubmittingFailure(false);
+      setIsSubmitting(false);
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
@@ -568,13 +594,44 @@ const CheckInSection: React.FC<CheckInSectionProps> = ({
     return `You have ${checkInsRemaining} check-ins remaining for this ${habit.frequency_unit}.`;
   };
 
+  // If habit is failed, render the payment component
+  if (isFailed) {
+    return (
+      <div className="space-y-4">
+        <Card className="border-red-200 bg-red-50 dark:bg-red-950/10">
+          <CardContent className="p-4">
+            <div className="flex items-center space-x-2 mb-2">
+              <XCircle className="h-5 w-5 text-red-500" />
+              <h3 className="text-lg font-semibold text-red-700 dark:text-red-400">
+                This habit has failed
+              </h3>
+            </div>
+            <p className="text-sm text-red-600 dark:text-red-400 mb-4">
+              You can no longer check in for this habit. Please complete the payment process below to fulfill your commitment.
+            </p>
+            <div className="text-sm text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/20 p-3 rounded-md">
+              <p className="font-medium">What happens now?</p>
+              <ul className="list-disc list-inside mt-1 space-y-1">
+                <li>This habit is now read-only and no further check-ins are allowed</li>
+                <li>Your stake amount must be paid as agreed when you created this habit</li>
+                <li>After payment, this habit will remain in your failed habits section for reference</li>
+              </ul>
+            </div>
+          </CardContent>
+        </Card>
+
+        <FailedHabitPayment habit={habit} stake={stake} />
+      </div>
+    );
+  }
+
   return (
     <Card className="mb-8 relative overflow-hidden">
       <CardContent className="pt-6">
         <div className="flex flex-col space-y-4">
           <div className="space-y-1">
             <h3 className="text-2xl font-semibold">Ready for {habit.name}?</h3>
-            <p className="text-muted-foreground">${stakeAmount} at stake</p>
+            <p className="text-muted-foreground">${stake.amount} at stake</p>
             {checkInDate && (
               <p className="text-sm text-muted-foreground">
                 {isCheckInAvailable
@@ -627,13 +684,12 @@ const CheckInSection: React.FC<CheckInSectionProps> = ({
                   variant={"default"}
                   onClick={() => handleConfirmCheckIn(true)}
                   disabled={
-                    isSubmittingSuccess ||
-                    isSubmittingFailure ||
+                    isSubmitting ||
                     (verificationType === "photo" && !photoFile) ||
                     (verificationType === "text" && !proofContent)
                   }
                 >
-                  {isSubmittingSuccess ? (
+                  {isSubmitting ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Submitting...
@@ -645,15 +701,18 @@ const CheckInSection: React.FC<CheckInSectionProps> = ({
                 <Button
                   variant={"secondary"}
                   onClick={() => handleConfirmCheckIn(false)}
-                  disabled={isSubmittingSuccess || isSubmittingFailure}
+                  disabled={isSubmitting}
                 >
-                  {isSubmittingFailure ? (
+                  {isSubmitting ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Submitting...
                     </>
                   ) : (
-                    "No, not yet"
+                    <>
+                      <XCircle className="mr-2 h-4 w-4" />
+                      No, I failed (will mark habit as failed)
+                    </>
                   )}
                 </Button>
               </DialogFooter>
@@ -709,7 +768,10 @@ const CheckInSection: React.FC<CheckInSectionProps> = ({
                       Submitting...
                     </>
                   ) : (
-                    "No, I missed it"
+                    <>
+                      <XCircle className="mr-2 h-4 w-4" />
+                      No, I missed it (will mark habit as failed)
+                    </>
                   )}
                 </Button>
               </DialogFooter>

@@ -3,7 +3,7 @@
 import { Tables } from "@/supabase/models/database.types";
 import HabitTable from "./HabitTable";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, CheckCircle } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
 
 interface HabitsTableProps {
@@ -45,6 +45,11 @@ export function HabitsTable({
 
   return (
     <div className="space-y-4">
+      <div className="flex items-center space-x-2 mb-2">
+        <CheckCircle className="h-5 w-5 text-green-500" />
+        <h2 className="text-lg font-semibold">Active Habits</h2>
+      </div>
+
       <HabitTable habits={habits} stakes={stakesArray} checkins={checkins} />
 
       {/* Pagination */}

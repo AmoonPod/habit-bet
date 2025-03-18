@@ -236,9 +236,8 @@ export default function HabitInsights({ habit, checkins }: HabitInsightsProps) {
       if (worstDay.successRate < 0.5 && hasFailedCheckins) {
         suggestions.push({
           title: `Struggle on ${worstDay.fullName || "certain days"}s`,
-          description: `You tend to miss your habit most often on ${
-            worstDay.fullName || "certain days"
-          }s. Consider setting a special reminder or preparing in advance for this day.`,
+          description: `You tend to miss your habit most often on ${worstDay.fullName || "certain days"
+            }s. Consider setting a special reminder or preparing in advance for this day.`,
           icon: AlertTriangle,
         });
       }
@@ -422,8 +421,8 @@ export default function HabitInsights({ habit, checkins }: HabitInsightsProps) {
                   {habit?.frequency_unit === "day" || !habit?.frequency_unit
                     ? "Daily check-ins"
                     : habit?.frequency_unit === "week"
-                    ? `Weekly goal: ${habit?.frequency_value || 1} check-ins`
-                    : `Monthly goal: ${habit?.frequency_value || 1} check-ins`}
+                      ? `Weekly goal: ${habit?.frequency_value || 1} check-ins`
+                      : `Monthly goal: ${habit?.frequency_value || 1} check-ins`}
                 </span>
               </div>
             </div>
@@ -508,8 +507,8 @@ export default function HabitInsights({ habit, checkins }: HabitInsightsProps) {
                           entry.name === insights.bestDay.name
                             ? "#6366F1"
                             : entry.name === insights.worstDay.name
-                            ? "#A1A1AA"
-                            : "#A855F7"
+                              ? "#A1A1AA"
+                              : "#A855F7"
                         }
                       />
                     ))}

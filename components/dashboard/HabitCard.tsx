@@ -71,9 +71,9 @@ export default function HabitCard({
       months: Math.max(
         0,
         (today.getFullYear() - startDate.getFullYear()) * 12 +
-          today.getMonth() -
-          startDate.getMonth() +
-          (today.getDate() >= startDate.getDate() ? 0 : -1)
+        today.getMonth() -
+        startDate.getMonth() +
+        (today.getDate() >= startDate.getDate() ? 0 : -1)
       ),
     };
 
@@ -194,18 +194,16 @@ export default function HabitCard({
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-1">
                 <TrendingUp
-                  className={`h-4 w-4 ${
-                    completionPercentage > 50
+                  className={`h-4 w-4 ${completionPercentage > 50
                       ? "text-indigo-500"
                       : "text-zinc-500"
-                  }`}
+                    }`}
                 />
                 <span
-                  className={`text-xs ${
-                    completionPercentage > 50
+                  className={`text-xs ${completionPercentage > 50
                       ? "text-indigo-500"
                       : "text-zinc-500"
-                  }`}
+                    }`}
                 >
                   {completionPercentage}% Complete
                 </span>

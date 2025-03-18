@@ -17,6 +17,7 @@ export async function checkInHabit(
     proofContent?: string,
     proofFile?: File,
     checkInDate?: Date,
+    isMissedCheckIn: boolean = false,
 ): Promise<
     { success: boolean; message?: string; forfeitAmount?: number; error?: any }
 > {
@@ -163,6 +164,7 @@ export async function checkInHabit(
             forfeitureResult = await handleStakeForfeiture(
                 habit_uuid,
                 completed,
+                isMissedCheckIn,
             );
             if (!forfeitureResult.success) {
                 console.error(
@@ -342,6 +344,7 @@ export async function deleteHabit(habit_uuid: string) {
 export async function handleStakeForfeiture(
     habit_uuid: string,
     completed: boolean,
+    isMissedCheckIn: boolean = false,
 ): Promise<
     { success: boolean; message?: string; forfeitAmount?: number; error?: any }
 > {
@@ -374,12 +377,11 @@ export async function handleStakeForfeiture(
             return { success: true };
         }
 
-        // Get all successful check-ins to calculate streak
+        // Get all check-ins to calculate failure rate
         const { data: checkins, error: checkinsError } = await supabase
             .from("habit_checkins")
             .select("*")
             .eq("habit_uuid", habit_uuid)
-            .eq("status", "true")
             .order("created_at", { ascending: false });
 
         if (checkinsError) {
@@ -391,86 +393,79 @@ export async function handleStakeForfeiture(
             };
         }
 
-        // Calculate current streak
-        let streak = 0;
-        if (checkins && checkins.length > 0) {
-            const sortedCheckins = [...checkins].sort(
-                (a, b) =>
-                    new Date(b.created_at).getTime() -
-                    new Date(a.created_at).getTime(),
-            );
+        // Calculate failure rate
+        const totalCheckins = checkins?.length || 0;
+        const failedCheckins = checkins?.filter((c) =>
+            c.status === "false"
+        ).length || 0;
+        const failureRate = totalCheckins > 0
+            ? failedCheckins / totalCheckins
+            : 0;
 
-            let previousDate: Date | null = null;
+        // Always mark habit as failed when user explicitly admits failure or misses a check-in
+        // Mark habit as failed
+        const { error: updateError } = await supabase
+            .from("habits")
+            .update({ status: "failed" })
+            .eq("uuid", habit_uuid);
 
-            for (const checkin of sortedCheckins) {
-                const currentDate = new Date(checkin.created_at);
-
-                if (previousDate === null) {
-                    streak = 1;
-                } else {
-                    const dayDiff = differenceInDays(previousDate, currentDate);
-                    if (dayDiff === 1) {
-                        streak++;
-                    } else {
-                        break; // Streak is broken
-                    }
-                }
-
-                previousDate = currentDate;
-            }
+        if (updateError) {
+            console.error("Error updating habit status:", updateError);
         }
 
-        // Calculate forfeiture amount based on streak
-        // The longer the streak, the less they forfeit
-        const totalStake = habitData.habit_stakes.amount;
-        let forfeitPercentage = 100; // Default to 100% forfeiture
+        // Mark stake as forfeited
+        const { error: stakeError } = await supabase
+            .from("habit_stakes")
+            .update({
+                status: "forfeited",
+                payment_status: "pending",
+                transaction_date: new Date().toISOString(),
+            })
+            .eq("uuid", habitData.stake_uuid);
 
-        if (streak >= 100) {
-            forfeitPercentage = 10; // Only forfeit 10% after 100+ day streak
-        } else if (streak >= 30) {
-            forfeitPercentage = 25; // Forfeit 25% after 30+ day streak
-        } else if (streak >= 14) {
-            forfeitPercentage = 50; // Forfeit 50% after 14+ day streak
-        } else if (streak >= 7) {
-            forfeitPercentage = 75; // Forfeit 75% after 7+ day streak
+        if (stakeError) {
+            console.error("Error updating stake status:", stakeError);
         }
 
-        const forfeitAmount = Math.round(
-            (totalStake * forfeitPercentage) / 100,
-        );
+        // Create a payment record
+        const { error: paymentError } = await supabase
+            .from("habit_payments")
+            .insert({
+                stake_uuid: habitData.stake_uuid,
+                habit_uuid: habit_uuid,
+                amount: habitData.habit_stakes.amount,
+                payment_status: "pending",
+            });
 
-        // Update the stake status to reflect partial forfeiture
-        if (forfeitAmount > 0) {
-            const { error: updateError } = await supabase
-                .from("habit_stakes")
-                .update({
-                    status: "partially_forfeited",
-                    amount: totalStake - forfeitAmount, // Reduce the stake by the forfeited amount
-                })
-                .eq("uuid", habitData.stake_uuid);
+        if (paymentError) {
+            console.error("Error creating payment record:", paymentError);
+        }
 
-            if (updateError) {
-                console.error("Error updating stake:", updateError);
-                return {
-                    success: false,
-                    message: "Failed to update stake",
-                    error: updateError,
-                };
-            }
+        // Determine the failure reason based on the context
+        let failureReason;
+        if (isMissedCheckIn) {
+            failureReason = "You missed a required check-in for your habit.";
+        } else if (!completed) {
+            failureReason = "You admitted to failing this habit.";
+        } else if (failureRate > 0.3) {
+            failureReason = `Your failure rate of ${
+                (failureRate * 100).toFixed(1)
+            }% exceeds the 30% threshold.`;
+        } else {
+            failureReason = "This habit has been marked as failed.";
         }
 
         return {
             success: true,
-            forfeitAmount,
-            message: streak >= 7
-                ? `Based on your ${streak}-day streak, you only forfeited ${forfeitPercentage}% of your stake ($${forfeitAmount}).`
-                : `You forfeited $${forfeitAmount} of your stake.`,
+            message:
+                `Habit failed: ${failureReason} Your stake has been forfeited and payment is required.`,
+            forfeitAmount: habitData.habit_stakes.amount,
         };
     } catch (error) {
-        console.error("Error handling stake forfeiture:", error);
+        console.error("Error in handleStakeForfeiture:", error);
         return {
             success: false,
-            message: "An unexpected error occurred",
+            message: "An error occurred while processing the forfeiture",
             error,
         };
     }

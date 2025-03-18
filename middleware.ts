@@ -1,24 +1,47 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { createClient } from "./utils/supabase/middleware";
+
 export async function middleware(request: NextRequest) {
-  const { supabase, response } = createClient(request);
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
-  if (!user) {
-    if (
-      request.nextUrl.pathname != "/login" &&
-      request.nextUrl.pathname != "/"
-    ) {
-      return NextResponse.redirect(new URL("/login", request.url));
+  try {
+    // Create a response with the CORS headers
+    const response = NextResponse.next({
+      request: {
+        headers: request.headers,
+      },
+    });
+
+    const { supabase, response: supabaseResponse } = createClient(request);
+
+    // Refresh session if possible
+    const {
+      data: { session },
+      error,
+    } = await supabase.auth.getSession();
+
+    // Handle authentication
+    if (!session) {
+      if (
+        request.nextUrl.pathname !== "/login" &&
+        request.nextUrl.pathname !== "/" &&
+        !request.nextUrl.pathname.startsWith("/auth/")
+      ) {
+        return NextResponse.redirect(new URL("/login", request.url));
+      }
+    } else {
+      if (request.nextUrl.pathname === "/login") {
+        return NextResponse.redirect(new URL("/dashboard", request.url));
+      }
     }
-  } else {
-    if (request.nextUrl.pathname == "/login") {
-      return NextResponse.redirect(new URL("/dashboard", request.url));
-    }
+
+    return supabaseResponse;
+  } catch (e) {
+    // If there's an error, proceed without blocking the request
+    return NextResponse.next({
+      request: {
+        headers: request.headers,
+      },
+    });
   }
-  return response;
 }
 
 export const config = {

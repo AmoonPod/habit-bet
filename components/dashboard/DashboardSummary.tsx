@@ -2,7 +2,7 @@
 
 import { Tables } from "@/supabase/models/database.types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Target, TrendingUp, Calendar, Award } from "lucide-react";
+import { Target, Award, XCircle, PieChart, CheckCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 
 interface DashboardSummaryProps {
@@ -14,49 +14,23 @@ export default function DashboardSummary({
   habits,
   checkins,
 }: DashboardSummaryProps) {
-  const [todayCheckins, setTodayCheckins] = useState(0);
-
   // Calculate summary statistics
   const totalHabits = habits.length;
+  const activeHabits = habits.filter(habit => habit.status !== "failed").length;
+  const failedHabits = habits.filter(habit => habit.status === "failed").length;
 
-  useEffect(() => {
-    // Calculate today's check-ins
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+  // Calculate success vs failure rate
+  const successfulCheckins = checkins.filter(c => c.status === "true").length;
+  const failedCheckins = checkins.filter(c => c.status === "false").length;
+  const totalCheckins = successfulCheckins + failedCheckins;
 
-    // Debug: Log the date we're comparing against
-    console.log("Today's date for comparison:", today);
+  const successRate = totalCheckins > 0
+    ? Math.round((successfulCheckins / totalCheckins) * 100)
+    : 100;
 
-    const todayCount = checkins.filter((checkin) => {
-      const checkinDate = new Date(checkin.created_at);
-      checkinDate.setHours(0, 0, 0, 0);
-
-      // Debug: Log each checkin date for comparison
-      console.log("Checkin date:", checkinDate, "Status:", checkin.status);
-
-      // Confronto più affidabile: confronta anno, mese e giorno invece del timestamp
-      const isSameDay =
-        checkinDate.getFullYear() === today.getFullYear() &&
-        checkinDate.getMonth() === today.getMonth() &&
-        checkinDate.getDate() === today.getDate();
-
-      const isCompleted = checkin.status === "true";
-
-      return isSameDay && isCompleted;
-    }).length;
-
-    console.log("Today's checkins count:", todayCount);
-    setTodayCheckins(todayCount);
-  }, [checkins]);
-
-  // Calculate total completion rate
-  const totalCompletionRate =
-    habits.length > 0
-      ? Math.round(
-          (checkins.filter((c) => c.status === "true").length / habits.length) *
-            100
-        )
-      : 0;
+  const failureRate = totalCheckins > 0
+    ? Math.round((failedCheckins / totalCheckins) * 100)
+    : 0;
 
   // Calculate longest habit (in days)
   const longestHabit = habits.reduce((longest, habit) => {
@@ -68,6 +42,11 @@ export default function DashboardSummary({
     return durationInDays > longest ? durationInDays : longest;
   }, 0);
 
+  // Calculate the circle circumference and offset for the circular progress
+  const radius = 40;
+  const circumference = 2 * Math.PI * radius;
+  const successOffset = circumference - (circumference * successRate) / 100;
+
   return (
     <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
       <Card>
@@ -78,37 +57,33 @@ export default function DashboardSummary({
         <CardContent>
           <div className="text-2xl font-bold">{totalHabits}</div>
           <p className="text-xs text-muted-foreground">
-            {totalHabits === 1 ? "Active habit" : "Active habits"}
+            {totalHabits === 1 ? "Total habit" : "Total habits"}
           </p>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">
-            Today's Check-ins
-          </CardTitle>
-          <Calendar className="h-4 w-4 text-muted-foreground" />
+          <CardTitle className="text-sm font-medium">Active Habits</CardTitle>
+          <Target className="h-4 w-4 text-green-500" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{todayCheckins}</div>
+          <div className="text-2xl font-bold">{activeHabits}</div>
           <p className="text-xs text-muted-foreground">
-            {todayCheckins === 1
-              ? "Habit completed today"
-              : "Habits completed today"}
+            {activeHabits === 1 ? "Active habit" : "Active habits"}
           </p>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Completion Rate</CardTitle>
-          <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          <CardTitle className="text-sm font-medium">Failed Habits</CardTitle>
+          <XCircle className="h-4 w-4 text-red-500" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{totalCompletionRate}%</div>
+          <div className="text-2xl font-bold">{failedHabits}</div>
           <p className="text-xs text-muted-foreground">
-            Total completion percentage
+            {failedHabits === 1 ? "Failed habit" : "Failed habits"}
           </p>
         </CardContent>
       </Card>
