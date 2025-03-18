@@ -19,6 +19,7 @@ import {
   Info,
   Activity,
   AlertCircle,
+  CheckCircle,
 } from "lucide-react";
 import {
   format,
@@ -62,15 +63,36 @@ export default async function HabitPage({
     (c) => c.status === "true"
   ).length;
   const totalCheckins = habitCheckins.length;
-  const consistencyRate =
-    totalCheckins > 0
-      ? Math.round((successfulCheckins / totalCheckins) * 100)
+
+  // Calculate overall completion progress
+  // This shows how far along the user is in their total commitment
+  let totalRequiredCheckins = 0;
+  if (habit.frequency_value && habit.duration_value) {
+    totalRequiredCheckins = habit.frequency_value * habit.duration_value;
+  }
+
+  const completionProgress =
+    totalRequiredCheckins > 0
+      ? Math.min(
+          100,
+          Math.round((successfulCheckins / totalRequiredCheckins) * 100)
+        )
       : 0;
 
   // Calculate days active
   const daysSinceStart = habit.start_date
     ? differenceInDays(new Date(), parseISO(habit.start_date))
     : differenceInDays(new Date(), new Date(habit.created_at));
+
+  // Get unique dates with check-ins - for days active calculation
+  const uniqueCheckInDates = new Set();
+  habitCheckins.forEach((checkin) => {
+    const date = format(new Date(checkin.created_at), "yyyy-MM-dd");
+    uniqueCheckInDates.add(date);
+  });
+
+  // The total number of unique days with activity
+  const daysActive = uniqueCheckInDates.size;
 
   // Calculate most consistent day
   const dayCount = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
@@ -270,10 +292,21 @@ export default async function HabitPage({
             <div>
               <div className="flex items-center gap-2">
                 <Activity className="h-5 w-5 text-blue-500" />
-                <span className="text-2xl font-bold">{consistencyRate}%</span>
+                <span className="text-2xl font-bold">
+                  {completionProgress}%
+                </span>
               </div>
               <p className="text-sm text-muted-foreground mt-1">
-                Success rate ({totalCheckins} check-ins)
+                Completion progress
+              </p>
+              <div className="mt-2 h-1.5 w-full bg-muted rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-blue-500 rounded-full"
+                  style={{ width: `${completionProgress}%` }}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {successfulCheckins}/{totalRequiredCheckins} required check-ins
               </p>
             </div>
           </div>
@@ -286,7 +319,7 @@ export default async function HabitPage({
                 <div>
                   <p className="text-sm">
                     <span className="font-medium">Days active:</span>{" "}
-                    {daysSinceStart} days
+                    {daysActive} days
                   </p>
                 </div>
               </li>
@@ -378,7 +411,7 @@ export default async function HabitPage({
               <span>{checkInsRemaining} remaining</span>
             </div>
 
-            {checkInsRemaining > 0 && (
+            {checkInsRemaining > 0 ? (
               <p className="text-sm mt-3 text-amber-600 flex items-center gap-1">
                 <Clock className="h-3 w-3" />
                 <span>
@@ -388,8 +421,15 @@ export default async function HabitPage({
                     ? "the end of today"
                     : habit.frequency_unit === "week"
                     ? "Sunday"
-                    : "the end of the month"}
-                  .
+                    : "the end of the month"}{" "}
+                  to avoid failing this habit.
+                </span>
+              </p>
+            ) : (
+              <p className="text-sm mt-3 text-green-600 flex items-center gap-1">
+                <CheckCircle className="h-3 w-3" />
+                <span>
+                  All check-ins complete for this {habit.frequency_unit}!
                 </span>
               </p>
             )}

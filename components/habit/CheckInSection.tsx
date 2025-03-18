@@ -646,31 +646,50 @@ const CheckInSection: React.FC<CheckInSectionProps> = ({ habit, stake }) => {
         <FailedHabitPayment habit={habit} stake={stake} />
       ) : (
         <>
-          {/* Check-in button */}
-          {isCheckInAvailable && !isLoadingCheckIns && (
+          {/* Check-in button - Now properly disabled when no check-ins remaining */}
+          {!isLoadingCheckIns && (
             <div className="space-y-3">
-              {/* Progress info */}
               {checkInsRemaining !== null && (
                 <div className="mb-2">
-                  <Button
-                    variant="default"
-                    size="lg"
-                    className="w-full flex gap-2 items-center justify-center py-6"
-                    onClick={() => setIsCheckInDialogOpen(true)}
-                    disabled={isSubmitting}
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin mr-1" />
-                        Processing...
-                      </>
-                    ) : (
-                      <>
-                        <Check className="h-5 w-5" />
-                        Check In Now
-                      </>
-                    )}
-                  </Button>
+                  {checkInsRemaining > 0 ? (
+                    <Button
+                      variant="default"
+                      size="lg"
+                      className="w-full flex gap-2 items-center justify-center py-6"
+                      onClick={() => setIsCheckInDialogOpen(true)}
+                      disabled={isSubmitting}
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                          Processing...
+                        </>
+                      ) : (
+                        <>
+                          <Check className="h-5 w-5" />
+                          Check In Now
+                        </>
+                      )}
+                    </Button>
+                  ) : (
+                    <div className="text-center">
+                      <Button
+                        variant="outline"
+                        className="w-full border-dashed border-muted-foreground/30 text-muted-foreground"
+                        disabled
+                      >
+                        <Clock className="h-4 w-4 mr-2" />
+                        All check-ins complete for this {habit.frequency_unit}
+                      </Button>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        {habit.frequency_unit === "day"
+                          ? "Next check-in will be available tomorrow"
+                          : habit.frequency_unit === "week"
+                          ? "Next check-in will be available next week"
+                          : "Next check-in will be available next month"}
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -680,20 +699,6 @@ const CheckInSection: React.FC<CheckInSectionProps> = ({ habit, stake }) => {
           {isLoadingCheckIns && (
             <div className="flex justify-center p-4">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            </div>
-          )}
-
-          {/* Unavailable check-in */}
-          {!isCheckInAvailable && !isLoadingCheckIns && (
-            <div className="text-center">
-              <Button
-                variant="outline"
-                className="w-full border-dashed border-muted-foreground/30 text-muted-foreground"
-                disabled
-              >
-                <Clock className="h-4 w-4 mr-2" />
-                All check-ins complete for now
-              </Button>
             </div>
           )}
 

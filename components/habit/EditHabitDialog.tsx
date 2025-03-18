@@ -17,7 +17,7 @@ import { ColorPicker } from "@/components/ui/color-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Info, Pencil } from "lucide-react";
+import { Info, Pencil, Lock } from "lucide-react";
 import { editHabit } from "@/app/dashboard/[slug]/actions";
 import { toast } from "@/components/ui/use-toast";
 import { useRouter } from "next/navigation";
@@ -40,7 +40,7 @@ export default function EditHabitDialog({
   hasCheckins,
 }: EditHabitDialogProps) {
   const [open, setOpen] = useState(false);
-  const [name, setName] = useState(habit.name || "");
+  const name = habit.name || "";
   const [selectedIcon, setSelectedIcon] = useState<IconName | null>(
     (habit.icon as IconName) || null
   );
@@ -52,15 +52,6 @@ export default function EditHabitDialog({
   const router = useRouter();
 
   const handleSubmit = async () => {
-    if (!name.trim()) {
-      toast({
-        title: "Error",
-        description: "The habit name is required",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setIsSubmitting(true);
 
     try {
@@ -141,19 +132,28 @@ export default function EditHabitDialog({
         <DialogHeader>
           <DialogTitle>Edit Habit</DialogTitle>
           <DialogDescription>
-            Make changes to your habit. You can only make verification stricter
-            if you already have check-ins.
+            Customize your habit's appearance and verification method.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="space-y-2">
-            <Label htmlFor="name">Habit Name</Label>
-            <Input
-              id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g., Go to the gym"
-            />
+            <div className="flex items-center justify-between">
+              <Label htmlFor="name">Habit Name</Label>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex items-center text-muted-foreground text-xs">
+                      <Lock className="h-3 w-3 mr-1" />
+                      <span>Cannot be changed</span>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Habit name cannot be changed to prevent URL issues</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+            <Input id="name" value={name} disabled className="bg-muted/50" />
           </div>
 
           <div className="grid grid-cols-2 gap-4">

@@ -49,70 +49,23 @@ export default function HabitCard({
         checkin.habit_uuid === habit.uuid && checkin.status === "true"
     ).length;
 
-    // Calcola il numero di check-in attesi fino ad oggi
-    const startDate = new Date(habit.created_at);
-    const today = new Date();
-    let expectedCheckinsToDate = 0;
+    // Calculate total required check-ins for the entire habit duration
+    const totalRequiredCheckins = habit.frequency_value * habit.duration_value;
 
-    // Calcola il tempo trascorso dall'inizio dell'abitudine
-    const elapsedTime = {
-      days: Math.max(
-        0,
-        Math.floor(
-          (today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
-        )
-      ),
-      weeks: Math.max(
-        0,
-        Math.floor(
-          (today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24 * 7)
-        )
-      ),
-      months: Math.max(
-        0,
-        (today.getFullYear() - startDate.getFullYear()) * 12 +
-        today.getMonth() -
-        startDate.getMonth() +
-        (today.getDate() >= startDate.getDate() ? 0 : -1)
-      ),
-    };
-
-    // Calcola il numero di check-in attesi in base alla frequenza
-    if (habit.frequency_unit === "day") {
-      expectedCheckinsToDate = Math.min(
-        elapsedTime.days * habit.frequency_value,
-        habit.frequency_value * habit.duration_value
-      );
-    } else if (habit.frequency_unit === "week") {
-      expectedCheckinsToDate = Math.min(
-        elapsedTime.weeks * habit.frequency_value,
-        habit.frequency_value * habit.duration_value
-      );
-    } else if (habit.frequency_unit === "month") {
-      expectedCheckinsToDate = Math.min(
-        elapsedTime.months * habit.frequency_value,
-        habit.frequency_value * habit.duration_value
-      );
-    }
-
-    // Assicurati che ci sia almeno un check-in atteso
-    expectedCheckinsToDate = Math.max(1, expectedCheckinsToDate);
-
-    // Calcola la percentuale basata sui check-in attesi fino ad oggi
+    // Calculate percentage based on total required check-ins for the entire duration
     const percentage = Math.round(
-      (successfulCheckins / expectedCheckinsToDate) * 100
+      (successfulCheckins / totalRequiredCheckins) * 100
     );
 
-    // Limita la percentuale a 100%
+    // Limit percentage to 100%
     setCompletionPercentage(Math.min(percentage, 100));
 
     // Debug
     console.log({
       habit: habit.name,
       successfulCheckins,
-      expectedCheckinsToDate,
+      totalRequiredCheckins,
       percentage,
-      elapsedTime,
     });
   };
 
@@ -194,16 +147,18 @@ export default function HabitCard({
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-1">
                 <TrendingUp
-                  className={`h-4 w-4 ${completionPercentage > 50
+                  className={`h-4 w-4 ${
+                    completionPercentage > 50
                       ? "text-indigo-500"
                       : "text-zinc-500"
-                    }`}
+                  }`}
                 />
                 <span
-                  className={`text-xs ${completionPercentage > 50
+                  className={`text-xs ${
+                    completionPercentage > 50
                       ? "text-indigo-500"
                       : "text-zinc-500"
-                    }`}
+                  }`}
                 >
                   {completionPercentage}% Complete
                 </span>

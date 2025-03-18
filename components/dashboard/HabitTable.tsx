@@ -49,58 +49,12 @@ export default function HabitTable({
         checkin.habit_uuid === habit.uuid && checkin.status === "true"
     ).length;
 
-    // Calculate expected check-ins to date
-    const startDate = new Date(habit.created_at);
-    const today = new Date();
-    let expectedCheckinsToDate = 0;
+    // Calculate total required check-ins for the entire habit duration
+    const totalRequiredCheckins = habit.frequency_value * habit.duration_value;
 
-    // Calculate elapsed time since habit start
-    const elapsedTime = {
-      days: Math.max(
-        0,
-        Math.floor(
-          (today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
-        )
-      ),
-      weeks: Math.max(
-        0,
-        Math.floor(
-          (today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24 * 7)
-        )
-      ),
-      months: Math.max(
-        0,
-        (today.getFullYear() - startDate.getFullYear()) * 12 +
-          today.getMonth() -
-          startDate.getMonth() +
-          (today.getDate() >= startDate.getDate() ? 0 : -1)
-      ),
-    };
-
-    // Calculate expected check-ins based on frequency
-    if (habit.frequency_unit === "day") {
-      expectedCheckinsToDate = Math.min(
-        elapsedTime.days * habit.frequency_value,
-        habit.frequency_value * habit.duration_value
-      );
-    } else if (habit.frequency_unit === "week") {
-      expectedCheckinsToDate = Math.min(
-        elapsedTime.weeks * habit.frequency_value,
-        habit.frequency_value * habit.duration_value
-      );
-    } else if (habit.frequency_unit === "month") {
-      expectedCheckinsToDate = Math.min(
-        elapsedTime.months * habit.frequency_value,
-        habit.frequency_value * habit.duration_value
-      );
-    }
-
-    // Ensure there's at least one expected check-in
-    expectedCheckinsToDate = Math.max(1, expectedCheckinsToDate);
-
-    // Calculate percentage based on expected check-ins to date
+    // Calculate percentage based on total required check-ins for the entire duration
     const percentage = Math.round(
-      (successfulCheckins / expectedCheckinsToDate) * 100
+      (successfulCheckins / totalRequiredCheckins) * 100
     );
 
     // Limit percentage to 100%

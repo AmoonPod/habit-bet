@@ -3,8 +3,16 @@
 import { Tables } from "@/supabase/models/database.types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Activity, Calendar, CheckCircle, XCircle } from "lucide-react";
-import { useState, useEffect } from "react";
-import { format, parseISO, startOfWeek, addDays, subWeeks } from "date-fns";
+import { useState, useEffect, useMemo } from "react";
+import {
+  format,
+  parseISO,
+  startOfWeek,
+  addDays,
+  subWeeks,
+  isBefore,
+  subDays,
+} from "date-fns";
 
 interface HabitProgressProps {
   checkins: Tables<"habit_checkins">[];
@@ -17,6 +25,14 @@ export default function HabitProgress({ checkins, habit }: HabitProgressProps) {
   }>({});
   const [weekOffset, setWeekOffset] = useState(0);
   const [completionTrend, setCompletionTrend] = useState<string[]>([]);
+  const [canGoEarlier, setCanGoEarlier] = useState(true);
+
+  // Get habit start date for navigation boundary - move to useMemo to prevent recreation on each render
+  const habitStartDate = useMemo(() => {
+    return habit.start_date
+      ? parseISO(habit.start_date)
+      : new Date(habit.created_at);
+  }, [habit.start_date, habit.created_at]);
 
   // Process checkins to generate heatmap data
   useEffect(() => {
@@ -41,6 +57,12 @@ export default function HabitProgress({ checkins, habit }: HabitProgressProps) {
       startOfWeek(now, { weekStartsOn: 1 }),
       weekOffset
     );
+
+    // Check if we can go earlier based on habit start date
+    const earliestDateInView = startDate;
+    const shouldAllowEarlier = !isBefore(earliestDateInView, habitStartDate);
+    setCanGoEarlier(shouldAllowEarlier);
+
     const heatmapData: { [key: string]: { status: string; date: Date } } = {};
 
     // Initialize the week with empty days
@@ -65,10 +87,25 @@ export default function HabitProgress({ checkins, habit }: HabitProgressProps) {
     });
 
     setWeeklyHeatmap(heatmapData);
-  }, [checkins, weekOffset]);
+  }, [checkins, weekOffset, habitStartDate]);
 
   // Handle week navigation
   const navigateWeek = (direction: number) => {
+    if (direction > 0) {
+      // Going backwards (to earlier dates)
+      const now = new Date();
+      const currentStartDate = subWeeks(
+        startOfWeek(now, { weekStartsOn: 1 }),
+        weekOffset
+      );
+      const newStartDate = subWeeks(currentStartDate, 1);
+
+      // Don't allow navigating before the habit start date
+      if (isBefore(newStartDate, habitStartDate)) {
+        return;
+      }
+    }
+
     setWeekOffset((prev) => prev + direction);
   };
 
@@ -142,7 +179,12 @@ export default function HabitProgress({ checkins, habit }: HabitProgressProps) {
             <div className="flex justify-between items-center">
               <button
                 onClick={() => navigateWeek(1)}
-                className="text-xs text-muted-foreground hover:text-foreground"
+                className={`text-xs ${
+                  !canGoEarlier
+                    ? "text-muted-foreground/50 cursor-not-allowed"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                disabled={!canGoEarlier}
               >
                 ← Earlier
               </button>

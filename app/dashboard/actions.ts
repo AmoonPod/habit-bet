@@ -137,3 +137,18 @@ export async function getHabitPayments() {
     }
     return data || [];
 }
+
+export async function getHabitStakes() {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from("habit_stakes")
+        .select("*");
+
+    if (error) {
+        console.error("Error fetching habit stakes:", error);
+        return [];
+    }
+
+    return data || [];
+}
