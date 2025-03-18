@@ -32,6 +32,12 @@ const CheckInButton: React.FC<CheckInButtonProps> = ({
     }, 3000); // Hide after 3 seconds
   };
 
+  const handleScrollToCheckIn = () => {
+    document
+      .getElementById("check-in-section")
+      ?.scrollIntoView({ behavior: "smooth" });
+  };
+
   return (
     <div>
       <Dialog>
@@ -76,6 +82,10 @@ const CheckInButton: React.FC<CheckInButtonProps> = ({
           </motion.div>
         )}
       </AnimatePresence>
+
+      <Button variant="default" onClick={handleScrollToCheckIn}>
+        Complete Your First Check-in
+      </Button>
     </div>
   );
 };

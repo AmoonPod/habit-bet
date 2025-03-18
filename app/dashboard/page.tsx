@@ -4,12 +4,16 @@ import { HabitsTable } from "@/components/dashboard/HabitsTable";
 import FailedHabitsSection from "@/components/dashboard/FailedHabitsSection";
 import FailedHabitsStats from "@/components/dashboard/FailedHabitsStats";
 import { Target, Plus, XCircle } from "lucide-react";
-import { getHabits, getHabitCheckins, getAllStakes, getHabitPayments } from "./actions";
+import {
+  getHabits,
+  getHabitCheckins,
+  getAllStakes,
+  getHabitPayments,
+} from "./actions";
 import DashboardFilters from "@/components/dashboard/DashboardFilters";
 import DashboardSummary from "@/components/dashboard/DashboardSummary";
 import { Tables } from "@/supabase/models/database.types";
 import HabitInsights from "@/components/dashboard/HabitInsights";
-import NewHabitButton from "@/components/dashboard/NewHabitButton";
 import NewHabitDialog from "@/components/dashboard/NewHabitDialog";
 
 interface SearchParams {
@@ -45,13 +49,9 @@ export default async function HabitsPage({
             Start your journey by creating your first habit. Remember, every
             great achievement begins with a single step!
           </p>
-          <p className="text-sm text-muted-foreground">
-            Click on the{" "}
-            <span className="inline-flex items-center justify-center bg-primary text-primary-foreground rounded-full w-5 h-5 mx-1">
-              <Plus className="h-3 w-3" />
-            </span>{" "}
-            button in the top right to get started.
-          </p>
+          <div className="mt-2">
+            <NewHabitDialog />
+          </div>
         </div>
       </div>
     );
@@ -75,8 +75,8 @@ export default async function HabitsPage({
   });
 
   // Separate active and failed habits
-  const activeHabits = habits.filter(habit => habit.status !== "failed");
-  const failedHabits = habits.filter(habit => habit.status === "failed");
+  const activeHabits = habits.filter((habit) => habit.status !== "failed");
+  const failedHabits = habits.filter((habit) => habit.status === "failed");
 
   // Filter and sort active habits based on parameters
   let filteredHabits = [...activeHabits];

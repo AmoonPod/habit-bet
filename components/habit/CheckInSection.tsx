@@ -55,10 +55,7 @@ interface CheckInSectionProps {
   stake: Tables<"habit_stakes">;
 }
 
-const CheckInSection: React.FC<CheckInSectionProps> = ({
-  habit,
-  stake,
-}) => {
+const CheckInSection: React.FC<CheckInSectionProps> = ({ habit, stake }) => {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [checkInDate, setCheckInDate] = useState<Date | null>(null);
@@ -197,16 +194,16 @@ const CheckInSection: React.FC<CheckInSectionProps> = ({
         setCheckInDate(nextCheckIn);
         setIsCheckInAvailable(
           isToday(nextCheckIn) ||
-          (habit.frequency_unit === "week" &&
-            isWithinInterval(today, {
-              start: startOfWeek(nextCheckIn, { weekStartsOn: 1 }),
-              end: endOfWeek(nextCheckIn, { weekStartsOn: 1 }),
-            })) ||
-          (habit.frequency_unit === "month" &&
-            isWithinInterval(today, {
-              start: startOfMonth(nextCheckIn),
-              end: endOfMonth(nextCheckIn),
-            }))
+            (habit.frequency_unit === "week" &&
+              isWithinInterval(today, {
+                start: startOfWeek(nextCheckIn, { weekStartsOn: 1 }),
+                end: endOfWeek(nextCheckIn, { weekStartsOn: 1 }),
+              })) ||
+            (habit.frequency_unit === "month" &&
+              isWithinInterval(today, {
+                start: startOfMonth(nextCheckIn),
+                end: endOfMonth(nextCheckIn),
+              }))
         );
       };
 
@@ -315,7 +312,8 @@ const CheckInSection: React.FC<CheckInSectionProps> = ({
         if (completed) {
           toast({
             title: "Check-in successful!",
-            description: "Your check-in has been recorded. Keep up the good work!",
+            description:
+              "Your check-in has been recorded. Keep up the good work!",
             variant: "default",
           });
         } else {
@@ -329,7 +327,9 @@ const CheckInSection: React.FC<CheckInSectionProps> = ({
           // Show a toast notification
           toast({
             title: "Habit Failed",
-            description: result.message || "Your habit has been marked as failed. Please complete the payment.",
+            description:
+              result.message ||
+              "Your habit has been marked as failed. Please complete the payment.",
             variant: "destructive",
           });
         }
@@ -421,7 +421,9 @@ const CheckInSection: React.FC<CheckInSectionProps> = ({
           // Show a toast notification
           toast({
             title: "Habit Failed",
-            description: result.message || "Your habit has been marked as failed due to missed check-in. Please complete the payment.",
+            description:
+              result.message ||
+              "Your habit has been marked as failed due to missed check-in. Please complete the payment.",
             variant: "destructive",
           });
         }
@@ -466,19 +468,21 @@ const CheckInSection: React.FC<CheckInSectionProps> = ({
       // Assuming the week starts on Monday
       const startOfWeekDate = startOfWeek(new Date(), { weekStartsOn: 1 });
       const endOfWeekDate = endOfWeek(new Date(), { weekStartsOn: 1 });
-      return `Did you complete your habit at least ${habit.frequency_value
-        } times this week (starting ${format(
-          startOfWeekDate,
-          "MMMM d"
-        )}, ending ${format(endOfWeekDate, "MMMM d")})?`;
+      return `Did you complete your habit at least ${
+        habit.frequency_value
+      } times this week (starting ${format(
+        startOfWeekDate,
+        "MMMM d"
+      )}, ending ${format(endOfWeekDate, "MMMM d")})?`;
     } else {
       const firstDayOfMonth = new Date(
         new Date().getFullYear(),
         new Date().getMonth(),
         1
       );
-      return `Did you complete your habit at least ${habit.frequency_value
-        } times this month (${format(firstDayOfMonth, "MMMM")})?`;
+      return `Did you complete your habit at least ${
+        habit.frequency_value
+      } times this month (${format(firstDayOfMonth, "MMMM")})?`;
     }
   };
 
@@ -607,14 +611,24 @@ const CheckInSection: React.FC<CheckInSectionProps> = ({
               </h3>
             </div>
             <p className="text-sm text-red-600 dark:text-red-400 mb-4">
-              You can no longer check in for this habit. Please complete the payment process below to fulfill your commitment.
+              You can no longer check in for this habit. Please complete the
+              payment process below to fulfill your commitment.
             </p>
             <div className="text-sm text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/20 p-3 rounded-md">
               <p className="font-medium">What happens now?</p>
               <ul className="list-disc list-inside mt-1 space-y-1">
-                <li>This habit is now read-only and no further check-ins are allowed</li>
-                <li>Your stake amount must be paid as agreed when you created this habit</li>
-                <li>After payment, this habit will remain in your failed habits section for reference</li>
+                <li>
+                  This habit is now read-only and no further check-ins are
+                  allowed
+                </li>
+                <li>
+                  Your stake amount must be paid as agreed when you created this
+                  habit
+                </li>
+                <li>
+                  After payment, this habit will remain in your failed habits
+                  section for reference
+                </li>
               </ul>
             </div>
           </CardContent>
@@ -626,96 +640,252 @@ const CheckInSection: React.FC<CheckInSectionProps> = ({
   }
 
   return (
-    <Card className="mb-8 relative overflow-hidden">
-      <CardContent className="pt-6">
-        <div className="flex flex-col space-y-4">
-          <div className="space-y-1">
-            <h3 className="text-2xl font-semibold">Ready for {habit.name}?</h3>
-            <p className="text-muted-foreground">${stake.amount} at stake</p>
-            {checkInDate && (
-              <p className="text-sm text-muted-foreground">
-                {isCheckInAvailable
-                  ? "It's time to check in!"
-                  : getNextCheckInMessage()}
-              </p>
-            )}
-            {checkInsRemaining !== null && (
-              <p className="text-sm font-medium mt-2 flex items-center">
-                <AlertCircle className="h-4 w-4 mr-1 text-blue-500" />
-                {getCheckInStatusMessage()}
-              </p>
-            )}
-          </div>
+    <>
+      {/* If habit is failed, show payment section */}
+      {isFailed ? (
+        <FailedHabitPayment habit={habit} stake={stake} />
+      ) : (
+        <>
+          {/* Check-in button */}
+          {isCheckInAvailable && !isLoadingCheckIns && (
+            <div className="space-y-3">
+              {/* Progress info */}
+              {checkInsRemaining !== null && (
+                <div className="mb-2">
+                  <Button
+                    variant="default"
+                    size="lg"
+                    className="w-full flex gap-2 items-center justify-center py-6"
+                    onClick={() => setIsCheckInDialogOpen(true)}
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <Check className="h-5 w-5" />
+                        Check In Now
+                      </>
+                    )}
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
 
-          <Dialog open={isCheckInDialogOpen} onOpenChange={handleDialogChange}>
-            <DialogTrigger asChild>
+          {/* Loading state */}
+          {isLoadingCheckIns && (
+            <div className="flex justify-center p-4">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          )}
+
+          {/* Unavailable check-in */}
+          {!isCheckInAvailable && !isLoadingCheckIns && (
+            <div className="text-center">
               <Button
-                size="lg"
-                variant="default"
-                disabled={
-                  !isCheckInAvailable ||
-                  isLoadingCheckIns ||
-                  checkInsRemaining === 0
-                }
+                variant="outline"
+                className="w-full border-dashed border-muted-foreground/30 text-muted-foreground"
+                disabled
               >
-                {isLoadingCheckIns ? (
-                  <>
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    Checking status...
-                  </>
-                ) : (
-                  <>
-                    <Check className="mr-2 h-5 w-5" />
-                    Check In
-                  </>
-                )}
+                <Clock className="h-4 w-4 mr-2" />
+                All check-ins complete for now
               </Button>
-            </DialogTrigger>
+            </div>
+          )}
+
+          {/* Check in dialog */}
+          <Dialog
+            open={isCheckInDialogOpen}
+            onOpenChange={setIsCheckInDialogOpen}
+          >
             <DialogContent className="sm:max-w-md">
               <DialogHeader>
-                <DialogTitle>Check In</DialogTitle>
-                <DialogDescription>{getCheckInQuestion()}</DialogDescription>
+                <DialogTitle>Check in for {habit.name}</DialogTitle>
+                <DialogDescription>
+                  {verificationType === "honor" && "Honor-based check-in"}
+                  {verificationType === "photo" &&
+                    "Photo verification required"}
+                  {verificationType === "text" && "Text description required"}
+                </DialogDescription>
               </DialogHeader>
 
-              {renderVerificationUI()}
+              <div className="space-y-4 py-2">
+                {/* Text proof */}
+                {(verificationType === "text" ||
+                  verificationType === "honor") && (
+                  <div className="space-y-2">
+                    <Label htmlFor="proof-content">
+                      {verificationType === "text"
+                        ? "Describe how you completed this habit"
+                        : "Notes (optional)"}
+                    </Label>
+                    <Textarea
+                      id="proof-content"
+                      placeholder={
+                        verificationType === "text"
+                          ? "Provide details about your activity..."
+                          : "Add any notes about today's habit..."
+                      }
+                      value={proofContent}
+                      onChange={(e) => setProofContent(e.target.value)}
+                      rows={3}
+                    />
+                  </div>
+                )}
 
-              <DialogFooter className="mt-4">
+                {/* Photo proof */}
+                {verificationType === "photo" && (
+                  <div className="space-y-2">
+                    <Label htmlFor="photo-proof">Upload a photo as proof</Label>
+                    <div className="mt-2">
+                      <div className="flex items-center gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="w-full justify-start"
+                        >
+                          <Camera className="h-4 w-4 mr-2" />
+                          {photoFile ? photoFile.name : "Choose photo"}
+                        </Button>
+                        {photoFile && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setPhotoFile(null)}
+                          >
+                            <XCircle className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                      <Input
+                        ref={fileInputRef}
+                        id="photo-proof"
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const files = e.target.files;
+                          if (files && files.length > 0) {
+                            setPhotoFile(files[0]);
+                          }
+                        }}
+                      />
+                    </div>
+                    {photoFile && (
+                      <div className="mt-2 max-h-52 overflow-hidden rounded-md border">
+                        <img
+                          src={URL.createObjectURL(photoFile)}
+                          alt="Proof"
+                          className="w-full object-cover"
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <DialogFooter className="flex sm:justify-between">
                 <Button
-                  variant={"default"}
-                  onClick={() => handleConfirmCheckIn(true)}
-                  disabled={
-                    isSubmitting ||
-                    (verificationType === "photo" && !photoFile) ||
-                    (verificationType === "text" && !proofContent)
-                  }
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setIsCheckInDialogOpen(false)}
                 >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Submitting...
-                    </>
-                  ) : (
-                    "Yes, I did it"
-                  )}
+                  Cancel
                 </Button>
                 <Button
-                  variant={"secondary"}
-                  onClick={() => handleConfirmCheckIn(false)}
-                  disabled={isSubmitting}
+                  type="button"
+                  disabled={
+                    isSubmitting ||
+                    (verificationType === "text" && !proofContent) ||
+                    (verificationType === "photo" && !photoFile)
+                  }
+                  onClick={() => handleConfirmCheckIn(true)}
+                  className="gap-1"
                 >
                   {isSubmitting ? (
                     <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      <Loader2 className="h-4 w-4 animate-spin" />
                       Submitting...
                     </>
                   ) : (
                     <>
-                      <XCircle className="mr-2 h-4 w-4" />
-                      No, I failed (will mark habit as failed)
+                      <Check className="h-4 w-4" />
+                      Complete Check-in
                     </>
                   )}
                 </Button>
               </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* Success dialog */}
+          <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
+            <DialogContent className="sm:max-w-md">
+              <div className="flex flex-col items-center justify-center py-6">
+                <div className="rounded-full bg-green-100 p-3 mb-4">
+                  <Sparkles className="h-8 w-8 text-green-600" />
+                </div>
+                <h2 className="text-xl font-semibold mb-2">
+                  Check-in Successful!
+                </h2>
+                <p className="text-center text-muted-foreground mb-6">
+                  Great job keeping up with your habit.
+                  {checkInsRemaining === 0
+                    ? " You've completed all your check-ins for this period!"
+                    : checkInsRemaining === 1
+                    ? " You have 1 more check-in remaining for this period."
+                    : ` You have ${checkInsRemaining} more check-ins remaining for this period.`}
+                </p>
+                <Button
+                  onClick={() => {
+                    setShowSuccessDialog(false);
+                    router.refresh();
+                  }}
+                >
+                  Continue
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* Failure dialog */}
+          <Dialog open={showFailureDialog} onOpenChange={setShowFailureDialog}>
+            <DialogContent className="sm:max-w-md">
+              <div className="flex flex-col items-center justify-center py-6">
+                <div className="rounded-full bg-red-100 p-3 mb-4">
+                  <AlertCircle className="h-8 w-8 text-red-600" />
+                </div>
+                <h2 className="text-xl font-semibold mb-2">Habit Has Failed</h2>
+                <p className="text-center text-muted-foreground mb-2">
+                  Unfortunately, you missed a required check-in and your habit
+                  has failed.
+                </p>
+                {forfeitAmount && (
+                  <p className="text-center font-semibold text-red-600 mb-6">
+                    ${forfeitAmount} has been forfeited.
+                  </p>
+                )}
+                {forfeitMessage && (
+                  <div className="bg-muted p-4 rounded-md w-full mb-6">
+                    <p className="text-sm">{forfeitMessage}</p>
+                  </div>
+                )}
+                <Button
+                  variant="default"
+                  onClick={() => {
+                    setShowFailureDialog(false);
+                    router.refresh();
+                  }}
+                >
+                  Continue
+                </Button>
+              </div>
             </DialogContent>
           </Dialog>
 
@@ -726,127 +896,50 @@ const CheckInSection: React.FC<CheckInSectionProps> = ({
           >
             <DialogContent className="sm:max-w-md">
               <DialogHeader>
-                <DialogTitle>Record Missed Check-in</DialogTitle>
+                <DialogTitle>Missing Check-in</DialogTitle>
                 <DialogDescription>
-                  Did you complete your habit on{" "}
-                  {missedCheckIn
-                    ? format(missedCheckIn, "MMMM d")
-                    : "the missed day"}
-                  ?
+                  You missed a check-in yesterday. Would you like to mark it as
+                  completed or missed?
                 </DialogDescription>
               </DialogHeader>
-
-              {renderVerificationUI()}
-
-              <DialogFooter className="mt-4">
-                <Button
-                  variant={"default"}
-                  onClick={() => handleMissedCheckIn(true)}
-                  disabled={
-                    isSubmittingMissed ||
-                    (verificationType === "photo" && !photoFile) ||
-                    (verificationType === "text" && !proofContent)
-                  }
-                >
-                  {isSubmittingMissed ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Submitting...
-                    </>
-                  ) : (
-                    "Yes, I did it"
-                  )}
-                </Button>
-                <Button
-                  variant={"secondary"}
-                  onClick={() => handleMissedCheckIn(false)}
-                  disabled={isSubmittingMissed}
-                >
-                  {isSubmittingMissed ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Submitting...
-                    </>
-                  ) : (
-                    <>
-                      <XCircle className="mr-2 h-4 w-4" />
-                      No, I missed it (will mark habit as failed)
-                    </>
-                  )}
-                </Button>
-              </DialogFooter>
+              <div className="flex flex-col gap-4 py-4">
+                {missedCheckIn && (
+                  <p className="text-sm text-muted-foreground">
+                    Date: {format(missedCheckIn, "MMMM d, yyyy")}
+                  </p>
+                )}
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => handleMissedCheckIn(false)}
+                    disabled={isSubmittingMissed}
+                  >
+                    {isSubmittingMissed ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      "Mark as Missed"
+                    )}
+                  </Button>
+                  <Button
+                    variant="default"
+                    className="flex-1"
+                    onClick={() => handleMissedCheckIn(true)}
+                    disabled={isSubmittingMissed}
+                  >
+                    {isSubmittingMissed ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      "Mark as Completed"
+                    )}
+                  </Button>
+                </div>
+              </div>
             </DialogContent>
           </Dialog>
-        </div>
-      </CardContent>
-
-      {/* Success Dialog */}
-      <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
-        <DialogContent className="sm:max-w-md">
-          <div className="text-center py-4">
-            <Sparkles className="h-12 w-12 mx-auto mb-4 text-indigo-500" />
-            <DialogTitle className="text-xl mb-2">Great job!</DialogTitle>
-            <DialogDescription>
-              You've successfully checked in for {habit.name}. Keep up the good
-              work!
-              {checkInsRemaining !== null && checkInsRemaining <= 1 && (
-                <p className="mt-2 font-medium">
-                  {checkInsRemaining === 0
-                    ? `You've completed all check-ins for this ${habit.frequency_unit}.`
-                    : `You have 1 check-in remaining for this ${habit.frequency_unit}.`}
-                </p>
-              )}
-            </DialogDescription>
-          </div>
-          <DialogFooter>
-            <Button
-              className="w-full"
-              variant="default"
-              onClick={() => setShowSuccessDialog(false)}
-            >
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Failure Dialog */}
-      <Dialog open={showFailureDialog} onOpenChange={setShowFailureDialog}>
-        <DialogContent className="sm:max-w-md">
-          <div className="text-center py-4">
-            <XCircle className="h-12 w-12 mx-auto mb-4 text-zinc-500" />
-            <DialogTitle className="text-xl mb-2">
-              Check-in Recorded
-            </DialogTitle>
-            <DialogDescription>
-              <p>
-                You've recorded that you didn't complete {habit.name} this time.
-              </p>
-              {forfeitAmount !== null && forfeitAmount > 0 && (
-                <div className="mt-4 p-4 bg-zinc-50 rounded-lg">
-                  <p className="font-medium text-zinc-800">
-                    {forfeitMessage ||
-                      `You forfeited $${forfeitAmount} of your stake.`}
-                  </p>
-                  <p className="text-sm text-zinc-700 mt-2">
-                    Remember, building habits takes time. Don't give up!
-                  </p>
-                </div>
-              )}
-            </DialogDescription>
-          </div>
-          <DialogFooter>
-            <Button
-              className="w-full"
-              variant="outline"
-              onClick={() => setShowFailureDialog(false)}
-            >
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </Card>
+        </>
+      )}
+    </>
   );
 };
 
