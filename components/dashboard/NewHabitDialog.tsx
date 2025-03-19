@@ -46,6 +46,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Switch } from "@/components/ui/switch";
 
 export default function NewHabitDialog({
   open,
@@ -72,6 +73,7 @@ export default function NewHabitDialog({
   const [startDate, setStartDate] = useState<Date | null>(new Date());
   const [endDate, setEndDate] = useState<Date | null>(null);
   const [verificationType, setVerificationType] = useState("honor");
+  const [isPublic, setIsPublic] = useState(false);
 
   // Use either controlled or uncontrolled open state
   const isOpen = open !== undefined ? open : internalOpen;
@@ -162,6 +164,7 @@ export default function NewHabitDialog({
       start_date: startDate!,
       end_date: endDate!,
       verification_type: verificationType,
+      is_public: isPublic,
     };
 
     try {
@@ -502,6 +505,22 @@ export default function NewHabitDialog({
             </div>
 
             <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="public-habit">Make habit public</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Public habits will be visible in the Community tab
+                  </p>
+                </div>
+                <Switch
+                  id="public-habit"
+                  checked={isPublic}
+                  onCheckedChange={setIsPublic}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-4">
               <Label>Start Date</Label>
               <div className="text-sm text-muted-foreground">
                 {startDate ? startDate.toLocaleDateString() : "Not set"}
@@ -534,10 +553,10 @@ export default function NewHabitDialog({
             {step === 1
               ? "Basic Info"
               : step === 2
-              ? "Frequency"
-              : step === 3
-              ? "Stake"
-              : "Duration"}
+                ? "Frequency"
+                : step === 3
+                  ? "Stake"
+                  : "Duration"}
           </DialogDescription>
         </DialogHeader>
         <div className="py-4">

@@ -141,6 +141,7 @@ export type Database = {
           frequency_unit: string | null
           frequency_value: number | null
           icon: string | null
+          is_public: boolean
           name: string | null
           slug: string | null
           stake_uuid: string | null
@@ -159,6 +160,7 @@ export type Database = {
           frequency_unit?: string | null
           frequency_value?: number | null
           icon?: string | null
+          is_public?: boolean
           name?: string | null
           slug?: string | null
           stake_uuid?: string | null
@@ -177,6 +179,7 @@ export type Database = {
           frequency_unit?: string | null
           frequency_value?: number | null
           icon?: string | null
+          is_public?: boolean
           name?: string | null
           slug?: string | null
           stake_uuid?: string | null
@@ -195,6 +198,132 @@ export type Database = {
             referencedColumns: ["uuid"]
           },
         ]
+      }
+      post_comments: {
+        Row: {
+          content: string
+          created_at: string | null
+          post_uuid: string
+          updated_at: string | null
+          user_uuid: string
+          uuid: string
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          post_uuid: string
+          updated_at?: string | null
+          user_uuid: string
+          uuid?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          post_uuid?: string
+          updated_at?: string | null
+          user_uuid?: string
+          uuid?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "post_comments_post_uuid_fkey"
+            columns: ["post_uuid"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["uuid"]
+          },
+        ]
+      }
+      post_likes: {
+        Row: {
+          created_at: string | null
+          post_uuid: string
+          user_uuid: string
+          uuid: string
+        }
+        Insert: {
+          created_at?: string | null
+          post_uuid: string
+          user_uuid: string
+          uuid?: string
+        }
+        Update: {
+          created_at?: string | null
+          post_uuid?: string
+          user_uuid?: string
+          uuid?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "post_likes_post_uuid_fkey"
+            columns: ["post_uuid"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["uuid"]
+          },
+        ]
+      }
+      posts: {
+        Row: {
+          content: string
+          created_at: string | null
+          habit_uuid: string | null
+          updated_at: string | null
+          user_uuid: string
+          uuid: string
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          habit_uuid?: string | null
+          updated_at?: string | null
+          user_uuid: string
+          uuid?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          habit_uuid?: string | null
+          updated_at?: string | null
+          user_uuid?: string
+          uuid?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "posts_habit_uuid_fkey"
+            columns: ["habit_uuid"]
+            isOneToOne: false
+            referencedRelation: "habits"
+            referencedColumns: ["uuid"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          full_name: string | null
+          id: string
+          level: number | null
+          points: number | null
+          streak_count: number | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          full_name?: string | null
+          id: string
+          level?: number | null
+          points?: number | null
+          streak_count?: number | null
+        }
+        Update: {
+          avatar_url?: string | null
+          full_name?: string | null
+          id?: string
+          level?: number | null
+          points?: number | null
+          streak_count?: number | null
+        }
+        Relationships: []
       }
     }
     Views: {

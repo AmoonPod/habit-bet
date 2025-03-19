@@ -128,7 +128,7 @@ export default function HabitTable({
   // Mobile view - cards instead of table
   if (isMobile) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-3">
         {habits.map((habit) => {
           const completionPercentage = calculateCompletionPercentage(habit);
           const timeLeft = calculateTimeLeft(habit);
@@ -136,61 +136,70 @@ export default function HabitTable({
 
           return (
             <Link href={`/dashboard/${habit.slug}`} key={habit.uuid}>
-              <Card className="cursor-pointer hover:shadow-md transition-shadow">
+              <Card className="cursor-pointer hover:shadow-md transition-shadow border-l-4"
+                style={{ borderLeftColor: habit.color || "#4F46E5" }}>
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center space-x-2">
-                      <div
-                        className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: habit.color || "#4F46E5" }}
-                      />
-                      <h3 className="font-medium">{habit.name}</h3>
+                    <div className="flex-1 mr-2">
+                      <h3 className="font-medium text-base line-clamp-1">{habit.name}</h3>
                     </div>
-                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div>
-                      <p className="text-muted-foreground">Frequency</p>
-                      <p>
-                        {habit.frequency_value}/{habit.frequency_unit}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Stake</p>
-                      <p>${stakeAmount}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Time Left</p>
-                      <p>
-                        {timeLeft.value} {timeLeft.unit}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Verification</p>
-                      <Badge variant="outline" className="font-normal">
+                    <div className="flex items-center flex-shrink-0">
+                      <Badge variant="outline" className="text-xs font-normal mr-2 whitespace-nowrap">
                         {habit.verification_type === "honor" && "Honor"}
                         {habit.verification_type === "photo" && "Photo"}
                         {habit.verification_type === "text" && "Text"}
                       </Badge>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
                     </div>
                   </div>
 
-                  <div className="mt-3">
-                    <div className="flex items-center space-x-2">
-                      <Progress
-                        value={completionPercentage}
-                        className="h-2 flex-1"
-                      />
+                  <div className="mb-3">
+                    <div className="flex items-center gap-2">
+                      <div className="flex-grow">
+                        <Progress
+                          value={completionPercentage}
+                          className="h-2"
+                        />
+                      </div>
                       <span
-                        className={`text-xs ${
-                          completionPercentage > 50
-                            ? "text-indigo-500"
-                            : "text-zinc-500"
-                        }`}
+                        className={`text-xs font-medium whitespace-nowrap flex-shrink-0 ${completionPercentage > 50
+                          ? "text-indigo-500"
+                          : "text-muted-foreground"
+                          }`}
                       >
                         {completionPercentage}%
                       </span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-y-2 gap-x-4 text-sm">
+                    <div className="flex items-center">
+                      <div className="w-5 h-5 mr-2 flex items-center justify-center text-muted-foreground flex-shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-repeat"><path d="m17 2 4 4-4 4" /><path d="M3 11v-1a4 4 0 0 1 4-4h14" /><path d="m7 22-4-4 4-4" /><path d="M21 13v1a4 4 0 0 1-4 4H3" /></svg>
+                      </div>
+                      <div className="truncate">
+                        <span className="font-medium">{habit.frequency_value}/{habit.frequency_unit}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center">
+                      <div className="w-5 h-5 mr-2 flex items-center justify-center text-muted-foreground flex-shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-dollar-sign"><line x1="12" x2="12" y1="2" y2="22" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>
+                      </div>
+                      <div className="truncate">
+                        <span className="font-medium">${stakeAmount}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center">
+                      <div className="w-5 h-5 mr-2 flex items-center justify-center text-muted-foreground flex-shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-clock"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
+                      </div>
+                      <div className="truncate">
+                        <span className="font-medium">
+                          {timeLeft.value} {timeLeft.unit}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </CardContent>
@@ -204,16 +213,16 @@ export default function HabitTable({
 
   // Desktop view - table
   return (
-    <div className="rounded-md border">
+    <div className="rounded-md border overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Habit</TableHead>
+            <TableHead className="min-w-[150px]">Habit</TableHead>
             <TableHead>Frequency</TableHead>
             <TableHead>Stake</TableHead>
-            <TableHead>Progress</TableHead>
+            <TableHead className="min-w-[140px]">Progress</TableHead>
             <TableHead>Time Left</TableHead>
-            <TableHead>Verification</TableHead>
+            <TableHead className="min-w-[100px]">Verification</TableHead>
             <TableHead className="w-[50px]"></TableHead>
           </TableRow>
         </TableHeader>
@@ -234,40 +243,41 @@ export default function HabitTable({
                 <TableCell className="font-medium">
                   <div className="flex items-center space-x-2">
                     <div
-                      className="w-3 h-3 rounded-full"
+                      className="w-3 h-3 rounded-full flex-shrink-0"
                       style={{ backgroundColor: habit.color || "#4F46E5" }}
                     />
-                    <span>{habit.name}</span>
+                    <span className="truncate">{habit.name}</span>
                   </div>
                 </TableCell>
-                <TableCell className="text-muted-foreground">
+                <TableCell className="text-muted-foreground whitespace-nowrap">
                   {habit.frequency_value}/{habit.frequency_unit}
                 </TableCell>
-                <TableCell className="text-muted-foreground">
+                <TableCell className="text-muted-foreground whitespace-nowrap">
                   ${stakeAmount}
                 </TableCell>
                 <TableCell>
-                  <div className="flex items-center space-x-2">
-                    <Progress
-                      value={completionPercentage}
-                      className="h-2 w-16"
-                    />
+                  <div className="flex items-center gap-2 w-full pr-4">
+                    <div className="w-20 max-w-20 flex-shrink-0">
+                      <Progress
+                        value={completionPercentage}
+                        className="h-2"
+                      />
+                    </div>
                     <span
-                      className={`text-xs ${
-                        completionPercentage > 50
+                      className={`text-xs whitespace-nowrap flex-shrink-0 ${completionPercentage > 50
                           ? "text-indigo-500"
                           : "text-zinc-500"
-                      }`}
+                        }`}
                     >
                       {completionPercentage}%
                     </span>
                   </div>
                 </TableCell>
-                <TableCell className="text-muted-foreground">
+                <TableCell className="text-muted-foreground whitespace-nowrap">
                   {timeLeft.value} {timeLeft.unit}
                 </TableCell>
-                <TableCell>
-                  <Badge variant="outline" className="font-normal">
+                <TableCell className="whitespace-nowrap">
+                  <Badge variant="outline" className="font-normal whitespace-nowrap">
                     {habit.verification_type === "honor" && "Honor"}
                     {habit.verification_type === "photo" && "Photo"}
                     {habit.verification_type === "text" && "Text"}

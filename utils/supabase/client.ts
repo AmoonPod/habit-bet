@@ -1,4 +1,4 @@
-import { Database } from "@/supabase/models/database.types";
+import { Database } from "@/database.types";
 import { createBrowserClient } from "@supabase/ssr";
 import { SupabaseClient } from "@supabase/supabase-js";
 let supabaseClient: SupabaseClient<Database> | null = null;

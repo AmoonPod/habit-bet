@@ -8,9 +8,7 @@ import {
   LogOut,
   LayoutDashboard,
   TrendingUp,
-  Trophy,
   Calendar,
-  Settings,
   ChevronRight,
 } from "lucide-react";
 
@@ -29,9 +27,7 @@ export function Sidebar({
   const menuItems = [
     { icon: LayoutDashboard, label: "Overview", href: "#" },
     { icon: TrendingUp, label: "Progress", href: "#" },
-    { icon: Trophy, label: "Achievements", href: "#" },
     { icon: Calendar, label: "Calendar", href: "#" },
-    { icon: Settings, label: "Settings", href: "#" },
   ];
 
   return (
@@ -119,9 +115,7 @@ function SidebarContent() {
   const menuItems = [
     { icon: LayoutDashboard, label: "Overview", href: "#" },
     { icon: TrendingUp, label: "Progress", href: "#" },
-    { icon: Trophy, label: "Achievements", href: "#" },
     { icon: Calendar, label: "Calendar", href: "#" },
-    { icon: Settings, label: "Settings", href: "#" },
   ];
 
   return (

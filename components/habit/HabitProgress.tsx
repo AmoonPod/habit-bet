@@ -156,21 +156,21 @@ export default function HabitProgress({ checkins, habit }: HabitProgressProps) {
   };
 
   return (
-    <Card className="mb-8">
-      <CardHeader className="pb-3">
+    <Card className="mb-4 md:mb-6">
+      <CardHeader className="pb-2 md:pb-3 px-4 py-3 md:p-6">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg font-semibold">
+          <CardTitle className="text-base md:text-lg font-semibold">
             Habit Progress
           </CardTitle>
-          <Activity className="h-5 w-5 text-blue-500" />
+          <Activity className="h-4 md:h-5 w-4 md:w-5 text-blue-500" />
         </div>
       </CardHeader>
-      <CardContent>
-        <div className="space-y-6">
+      <CardContent className="px-4 pb-4 md:px-6 md:pb-6">
+        <div className="space-y-4 md:space-y-6">
           {/* Weekly heatmap */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <h4 className="text-sm font-medium">Weekly View</h4>
+              <h4 className="text-xs md:text-sm font-medium">Weekly View</h4>
               <div className="text-xs text-muted-foreground">
                 {format(weekStart, "MMM d")} - {format(weekEnd, "MMM d")}
               </div>
@@ -179,11 +179,10 @@ export default function HabitProgress({ checkins, habit }: HabitProgressProps) {
             <div className="flex justify-between items-center">
               <button
                 onClick={() => navigateWeek(1)}
-                className={`text-xs ${
-                  !canGoEarlier
+                className={`text-xs ${!canGoEarlier
                     ? "text-muted-foreground/50 cursor-not-allowed"
                     : "text-muted-foreground hover:text-foreground"
-                }`}
+                  }`}
                 disabled={!canGoEarlier}
               >
                 ← Earlier
@@ -192,24 +191,23 @@ export default function HabitProgress({ checkins, habit }: HabitProgressProps) {
               <div className="flex gap-1 justify-center my-2">
                 {Object.entries(weeklyHeatmap).map(([date, data]) => (
                   <div key={date} className="flex flex-col items-center">
-                    <div className="text-xs text-muted-foreground mb-1">
+                    <div className="text-[10px] md:text-xs text-muted-foreground mb-1">
                       {format(data.date, "E")[0]}
                     </div>
                     <div
-                      className={`w-8 h-8 rounded-md flex items-center justify-center ${getStatusColor(
+                      className={`w-6 h-6 md:w-8 md:h-8 rounded-md flex items-center justify-center ${getStatusColor(
                         data.status
                       )}`}
-                      title={`${format(data.date, "MMM d")}: ${
-                        data.status === "success"
+                      title={`${format(data.date, "MMM d")}: ${data.status === "success"
                           ? "Completed"
                           : data.status === "missed"
-                          ? "Missed"
-                          : "No check-in"
-                      }`}
+                            ? "Missed"
+                            : "No check-in"
+                        }`}
                     >
                       {getStatusIcon(data.status)}
                     </div>
-                    <div className="text-xs text-muted-foreground mt-1">
+                    <div className="text-[10px] md:text-xs text-muted-foreground mt-1">
                       {format(data.date, "d")}
                     </div>
                   </div>
@@ -219,11 +217,10 @@ export default function HabitProgress({ checkins, habit }: HabitProgressProps) {
               <button
                 onClick={() => navigateWeek(-1)}
                 disabled={weekOffset === 0}
-                className={`text-xs ${
-                  weekOffset === 0
+                className={`text-xs ${weekOffset === 0
                     ? "text-muted-foreground/50"
                     : "text-muted-foreground hover:text-foreground"
-                }`}
+                  }`}
               >
                 Later →
               </button>
@@ -233,35 +230,34 @@ export default function HabitProgress({ checkins, habit }: HabitProgressProps) {
           {/* Progress trend */}
           {checkins.length > 1 && (
             <div>
-              <h4 className="text-sm font-medium mb-2">Recent Trend</h4>
-              <div className="flex gap-1 items-center h-6">
+              <h4 className="text-xs md:text-sm font-medium mb-2">Recent Trend</h4>
+              <div className="flex gap-1 items-center h-4 md:h-6">
                 {completionTrend.map((status, i) => (
                   <div
                     key={i}
-                    className={`h-full rounded-sm transition-all duration-200 ${
-                      status === "success"
-                        ? "bg-green-500 w-6"
-                        : "bg-red-200 w-2"
-                    }`}
+                    className={`h-full rounded-sm transition-all duration-200 ${status === "success"
+                        ? "bg-green-500 w-4 md:w-6"
+                        : "bg-red-200 w-1 md:w-2"
+                      }`}
                     title={status === "success" ? "Completed" : "Missed"}
                   />
                 ))}
                 {completionTrend.length === 0 && (
                   <div className="text-xs text-muted-foreground">
-                    Not enough data yet
+                    No recent check-ins
                   </div>
                 )}
               </div>
             </div>
           )}
 
-          {/* Insight */}
-          <div className="bg-muted/50 p-3 rounded-lg">
-            <h4 className="text-sm font-medium mb-1 flex items-center">
-              <Calendar className="h-4 w-4 mr-1" />
-              Insight
-            </h4>
-            <p className="text-sm text-muted-foreground">
+          {/* Calendar view with streak info */}
+          <div className="border-t pt-3 md:pt-4 mt-3 md:mt-4">
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="text-xs md:text-sm font-medium">Insights</h4>
+              <Calendar className="h-3 md:h-4 w-3 md:w-4 text-muted-foreground" />
+            </div>
+            <p className="text-xs md:text-sm text-muted-foreground">
               {generateInsights()}
             </p>
           </div>

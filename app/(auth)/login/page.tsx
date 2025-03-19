@@ -1,50 +1,57 @@
+"use client"
 import { Button } from "@/components/ui/button";
-import { createClient } from "@/utils/supabase/server";
-import { headers } from "next/headers";
-import { redirect } from "next/navigation";
+import { useState } from "react";
+import { getOAuthURL } from "./action";
 
-export default async function LoginForm() {
-  const signIn = async () => {
-    "use server";
+// Create the server action
 
+
+function LoginButton() {
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSignIn = async () => {
     try {
-      const supabase = await createClient();
-      const headersList = headers();
-      const origin = headersList.get("origin");
-      const host = headersList.get("host");
+      setIsLoading(true);
+      // Call the server action to get the OAuth URL
+      const result = await getOAuthURL();
 
-      // Determine the redirect URL based on the environment
-      const redirectTo = process.env.NODE_ENV === "development"
-        ? `${origin}/auth/callback`
-        : `https://${host}/auth/callback`;
-
-      const { error, data } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          },
-        },
-      });
-
-      if (error) {
-        console.error("Auth error:", error);
-        throw error;
+      if (result.success && result.url) {
+        // Use window.location for the redirect
+        window.location.href = result.url;
+      } else {
+        console.error("Failed to get OAuth URL:", result.error);
+        // Navigate to error page if URL is not available
+        window.location.href = "/auth/auth-code-error";
       }
-
-      return redirect(data.url);
     } catch (error) {
-      console.error("Sign in error:", error);
-      // You might want to redirect to an error page here
-      return redirect("/auth/auth-code-error");
+      console.error("Error during sign in:", error);
+      setIsLoading(false);
     }
   };
 
   return (
-    <form action={signIn}>
-      <Button type="submit">Login with Google</Button>
-    </form>
+    <Button
+      onClick={handleSignIn}
+      disabled={isLoading}
+    >
+      {isLoading ? "Redirecting..." : "Login with Google"}
+    </Button>
+  );
+}
+
+// Main login page component
+export default function LoginPage() {
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-center">
+      <div className="w-full max-w-md space-y-8 p-8">
+        <div className="text-center">
+          <h1 className="text-3xl font-bold">Habit Bet</h1>
+          <p className="mt-2 text-sm text-gray-600">Sign in to continue to your account</p>
+        </div>
+        <div className="mt-8 flex justify-center">
+          <LoginButton />
+        </div>
+      </div>
+    </div>
   );
 }

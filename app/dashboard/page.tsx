@@ -47,6 +47,7 @@ import WeeklyActivityChart from "@/components/dashboard/WeeklyActivityChart";
 import CompletionTrendSection from "@/components/dashboard/CompletionTrendSection";
 import NewHabitDialog from "@/components/dashboard/NewHabitDialog";
 import StatusBadge from "@/components/dashboard/StatusBadge";
+import ResponsiveHabitRow from "@/components/dashboard/ResponsiveHabitRow";
 
 export default async function DashboardPage() {
   // Fetch data
@@ -174,11 +175,11 @@ export default async function DashboardPage() {
     .sort((a, b) => b.consistencyRate - a.consistencyRate)[0];
 
   return (
-    <div className="w-full p-4 md:p-8 space-y-6">
+    <div className="w-full p-3 md:p-8 space-y-4 md:space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-xl md:text-2xl font-bold tracking-tight">Dashboard</h1>
+          <p className="text-sm text-muted-foreground">
             Track your habits, monitor progress, and build consistency
           </p>
         </div>
@@ -186,16 +187,18 @@ export default async function DashboardPage() {
       </div>
 
       {/* All Habits Table (moved to top) */}
-      <div className="border rounded-lg shadow-sm bg-card">
-        <div className="p-4 border-b flex justify-between items-center">
+      <div className="border rounded-lg shadow-sm bg-card overflow-hidden">
+        <div className="p-3 md:p-4 border-b flex justify-between items-center">
           <div>
-            <h2 className="text-xl font-semibold">Your Habits</h2>
-            <p className="text-sm text-muted-foreground">
+            <h2 className="text-base md:text-xl font-semibold">Your Habits</h2>
+            <p className="text-xs md:text-sm text-muted-foreground">
               View and manage all your habits in one place
             </p>
           </div>
         </div>
-        <div className="border-b">
+
+        {/* Display headers only on larger screens */}
+        <div className="border-b hidden md:block">
           <div className="grid grid-cols-6 p-4 font-medium bg-muted/50">
             <div className="col-span-2">Habit</div>
             <div>Frequency</div>
@@ -204,6 +207,8 @@ export default async function DashboardPage() {
             <div>Status</div>
           </div>
         </div>
+
+        {/* Responsive list of habits */}
         <div className="divide-y">
           {/* Active Habits First */}
           {activeHabits.map((habit) => {
@@ -219,25 +224,40 @@ export default async function DashboardPage() {
             const stake = stakes.find((s) => s.uuid === habit.stake_uuid);
 
             return (
-              <Link
-                key={habit.uuid}
-                href={`/dashboard/${habit.slug}`}
-                className="block hover:bg-muted/30 transition-colors"
-              >
-                <div className="grid grid-cols-6 p-4 items-center">
-                  <div className="col-span-2 font-medium">{habit.name}</div>
-                  <div>
-                    {habit.frequency_value}x per {habit.frequency_unit}
+              <div key={habit.uuid}>
+                {/* Desktop view */}
+                <Link
+                  href={`/dashboard/${habit.slug}`}
+                  className="hidden md:block hover:bg-muted/30 transition-colors"
+                >
+                  <div className="grid grid-cols-6 p-4 items-center">
+                    <div className="col-span-2 font-medium truncate">{habit.name}</div>
+                    <div className="whitespace-nowrap">
+                      {habit.frequency_value}x per {habit.frequency_unit}
+                    </div>
+                    <div className="whitespace-nowrap">{stake ? `$${stake.amount}` : "No stake"}</div>
+                    <div className="pr-4">
+                      <HabitProgressBar
+                        habit={habit}
+                        checkins={habitCheckins}
+                      />
+                    </div>
+                    <div>
+                      <StatusBadge status="active" />
+                    </div>
                   </div>
-                  <div>{stake ? `$${stake.amount}` : "No stake"}</div>
-                  <div className="w-32">
-                    <HabitProgressBar habit={habit} checkins={habitCheckins} />
-                  </div>
-                  <div>
-                    <StatusBadge status="active" />
-                  </div>
+                </Link>
+
+                {/* Mobile view */}
+                <div className="md:hidden">
+                  <ResponsiveHabitRow
+                    habit={habit}
+                    stake={stake}
+                    checkins={habitCheckins}
+                    status="active"
+                  />
                 </div>
-              </Link>
+              </div>
             );
           })}
 
@@ -255,29 +275,41 @@ export default async function DashboardPage() {
             const stake = stakes.find((s) => s.uuid === habit.stake_uuid);
 
             return (
-              <Link
-                key={habit.uuid}
-                href={`/dashboard/${habit.slug}`}
-                className="block hover:bg-muted/30 transition-colors"
-              >
-                <div className="grid grid-cols-6 p-4 items-center bg-muted/20">
-                  <div className="col-span-2 font-medium text-muted-foreground">
-                    {habit.name}
+              <div key={habit.uuid}>
+                {/* Desktop view for failed habits */}
+                <Link
+                  href={`/dashboard/${habit.slug}`}
+                  className="hidden md:block hover:bg-muted/30 transition-colors"
+                >
+                  <div className="grid grid-cols-6 p-4 items-center bg-muted/20">
+                    <div className="col-span-2 font-medium text-muted-foreground truncate">
+                      {habit.name}
+                    </div>
+                    <div className="text-muted-foreground whitespace-nowrap">
+                      {habit.frequency_value}x per {habit.frequency_unit}
+                    </div>
+                    <div className="text-muted-foreground whitespace-nowrap">
+                      {stake ? `$${stake.amount}` : "No stake"}
+                    </div>
+                    <div className="pr-4">
+                      <HabitProgressBar habit={habit} checkins={habitCheckins} />
+                    </div>
+                    <div>
+                      <StatusBadge status="failed" />
+                    </div>
                   </div>
-                  <div className="text-muted-foreground">
-                    {habit.frequency_value}x per {habit.frequency_unit}
-                  </div>
-                  <div className="text-muted-foreground">
-                    {stake ? `$${stake.amount}` : "No stake"}
-                  </div>
-                  <div className="w-32">
-                    <HabitProgressBar habit={habit} checkins={habitCheckins} />
-                  </div>
-                  <div>
-                    <StatusBadge status="failed" />
-                  </div>
+                </Link>
+
+                {/* Mobile view for failed habits */}
+                <div className="md:hidden">
+                  <ResponsiveHabitRow
+                    habit={habit}
+                    stake={stake}
+                    checkins={habitCheckins}
+                    status="failed"
+                  />
                 </div>
-              </Link>
+              </div>
             );
           })}
 
@@ -295,8 +327,8 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* Overview Cards */}
-      <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Total Habits</CardTitle>
@@ -325,9 +357,8 @@ export default async function DashboardPage() {
               <div
                 className="h-full bg-green-500 rounded-full"
                 style={{
-                  width: `${
-                    (activeStakedAmount / Math.max(totalStakedAmount, 1)) * 100
-                  }%`,
+                  width: `${(activeStakedAmount / Math.max(totalStakedAmount, 1)) * 100
+                    }%`,
                 }}
               />
             </div>
@@ -388,27 +419,25 @@ export default async function DashboardPage() {
         </Card>
       </div>
 
-      {/* Charts Section */}
-      {habits.length > 0 && (
-        <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
-          <Card className="col-span-1">
-            <CardHeader>
-              <CardTitle>Weekly Activity</CardTitle>
-              <CardDescription>
-                Your check-in pattern across days of the week
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="h-[200px]">
-                <WeeklyActivityChart data={weeklyActivity} />
-              </div>
-            </CardContent>
-          </Card>
+      {/* Charts and Trends sections with responsive adjustments */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-4">
+        <Card className="col-span-1">
+          <CardHeader>
+            <CardTitle>Weekly Activity</CardTitle>
+            <CardDescription>
+              Your check-in pattern across days of the week
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[200px]">
+              <WeeklyActivityChart data={weeklyActivity} />
+            </div>
+          </CardContent>
+        </Card>
 
-          {/* Completion trend section with period selector */}
-          <CompletionTrendSection trendData={completionTrendData} />
-        </div>
-      )}
+        {/* Completion trend section with period selector */}
+        <CompletionTrendSection trendData={completionTrendData} />
+      </div>
     </div>
   );
 }

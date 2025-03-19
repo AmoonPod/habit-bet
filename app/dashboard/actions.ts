@@ -14,6 +14,7 @@ export interface CreateHabitProps {
     start_date: Date;
     end_date: Date;
     verification_type: string; // "honor", "photo", o "text"
+    is_public: boolean;
 }
 export async function createHabit(props: CreateHabitProps) {
     const supabase = await createClient();
@@ -54,6 +55,7 @@ export async function createHabit(props: CreateHabitProps) {
         slug: props.name.toLowerCase().replace(/\s/g, "-"),
         start_date: props.start_date.toISOString(),
         end_date: props.end_date.toISOString(),
+        is_public: props.is_public,
     });
 
     if (error) {
