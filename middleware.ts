@@ -3,6 +3,11 @@ import { createClient } from "./utils/supabase/middleware";
 
 export async function middleware(request: NextRequest) {
   try {
+    // Skip middleware for webhook routes
+    if (request.nextUrl.pathname.startsWith("/api/polar/webhooks")) {
+      return NextResponse.next();
+    }
+
     // Create a response with the CORS headers
     const response = NextResponse.next({
       request: {

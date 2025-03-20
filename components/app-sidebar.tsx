@@ -60,10 +60,10 @@ export function AppSidebar() {
     checkIfMobile();
 
     // Add event listener for resize
-    window.addEventListener('resize', checkIfMobile);
+    window.addEventListener("resize", checkIfMobile);
 
     // Cleanup
-    return () => window.removeEventListener('resize', checkIfMobile);
+    return () => window.removeEventListener("resize", checkIfMobile);
   }, []);
 
   // Set sidebar state based on device
@@ -110,7 +110,7 @@ export function AppSidebar() {
               {menuItems.map((item) => (
                 <SidebarMenuItem key={item.label}>
                   <SidebarMenuButton asChild>
-                    <Link href={item.href}>
+                    <Link href={item.href} prefetch>
                       <item.icon />
                       <span>{item.label}</span>
                     </Link>

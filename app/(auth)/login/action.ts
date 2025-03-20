@@ -3,7 +3,7 @@
 import { createClient } from "@/utils/supabase/server";
 import { headers } from "next/headers";
 
-export async function getOAuthURL() {
+export async function getOAuthURL(next: string = "/dashboard") {
     try {
         const supabase = await createClient();
         const headersList = await headers();
@@ -12,8 +12,8 @@ export async function getOAuthURL() {
 
         // Determine the redirect URL based on the environment
         const redirectTo = process.env.NODE_ENV === "development"
-            ? `${origin}/auth/callback`
-            : `https://${host}/auth/callback`;
+            ? `${origin}/auth/callback?next=${encodeURIComponent(next)}`
+            : `https://${host}/auth/callback?next=${encodeURIComponent(next)}`;
 
         const { error, data } = await supabase.auth.signInWithOAuth({
             provider: "google",

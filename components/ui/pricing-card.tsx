@@ -3,29 +3,14 @@
 import * as React from "react";
 import { BadgeCheck } from "lucide-react";
 import NumberFlow from "@number-flow/react";
-
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { ArrowRightIcon } from "@radix-ui/react-icons";
-import PolarButton from "@/components/ui/polar-button";
-import { useToast } from "@/components/ui/use-toast";
-
-export interface PricingTier {
-  id: string;
-  name: string;
-  price: Record<string, number | string>;
-  description: string;
-  features: string[];
-  cta: string;
-  highlighted?: boolean;
-  popular?: boolean;
-  polarPriceId?: {
-    monthly?: string;
-    yearly?: string;
-  };
-  polarProductId?: string; // For one-time purchases
-}
+import { PricingTier } from "@/lib/tiers";
+import { SubscriptionAwareCTA } from "./subscription-aware-cta";
+import { useSession } from "@/hooks/use-session";
+import { useSubscription } from "@/hooks/use-subscription";
+import { SubscriptionTier } from "@/lib/subscription";
 
 interface PricingCardProps {
   tier: PricingTier;
@@ -33,26 +18,23 @@ interface PricingCardProps {
 }
 
 export function PricingCard({ tier, paymentFrequency }: PricingCardProps) {
-  const price = tier.price[paymentFrequency];
-  const isHighlighted = tier.highlighted;
+  const price = tier.price[paymentFrequency as keyof typeof tier.price];
+  const isHighlighted = tier.popular;
   const isPopular = tier.popular;
-  const { toast } = useToast();
+  const { session } = useSession();
+  const { subscription } = useSubscription();
 
-  // Get the appropriate Polar price ID based on the payment frequency
-  const polarPriceId =
-    tier.polarPriceId?.[paymentFrequency as keyof typeof tier.polarPriceId];
+  // Map pricing tier name to subscription tier
+  const subscriptionTier: SubscriptionTier =
+    tier.name.toLowerCase() === "premium" ? "premium" : "free";
 
-  // Handle checkout errors
-  const handleCheckoutError = (error: Error) => {
-    toast({
-      title: "Checkout Error",
-      description: "There was a problem initiating checkout. Please try again.",
-      variant: "destructive",
-    });
-  };
+  // Determine if this is the user's current plan
+  const isCurrentPlan =
+    session && subscription?.tier === subscriptionTier && subscription.isActive;
 
-  // Determine if the tier is free
-  const isFree = typeof price === "string" && price.toLowerCase() === "free";
+  // Get appropriate product ID for this tier/frequency
+  const productId =
+    tier.productId[paymentFrequency as keyof typeof tier.productId];
 
   return (
     <Card
@@ -64,9 +46,6 @@ export function PricingCard({ tier, paymentFrequency }: PricingCardProps) {
         isPopular && "ring-2 ring-slate-900 dark:ring-slate-50"
       )}
     >
-      {isHighlighted && <HighlightedBackground />}
-      {isPopular && <PopularBackground />}
-
       <h2 className="flex items-center gap-3 text-xl font-medium capitalize">
         {tier.name}
         {isPopular && (
@@ -89,7 +68,7 @@ export function PricingCard({ tier, paymentFrequency }: PricingCardProps) {
               className="text-4xl font-medium"
             />
             <p className="-mt-2 text-xs text-slate-500 dark:text-slate-400">
-              Per {paymentFrequency === "yearly" ? "year" : "month"}
+              Per month
             </p>
           </>
         ) : (
@@ -117,40 +96,30 @@ export function PricingCard({ tier, paymentFrequency }: PricingCardProps) {
         </ul>
       </div>
 
-      {isFree ? (
-        <PolarButton
-          variant={isHighlighted ? "secondary" : "default"}
-          className="w-full"
-          // Ensure at least one of these is provided
-          productId={tier.polarProductId || undefined}
-          priceId={polarPriceId || undefined}
-          description={`Sign up for ${tier.name} plan`}
-          onCheckoutError={handleCheckoutError}
-          // Disable button if neither ID is available
-          disabled={!tier.polarProductId && !polarPriceId}
+      {isCurrentPlan ? (
+        <div
+          className={cn(
+            "w-full py-2 px-4 text-center rounded-md border-2",
+            isHighlighted
+              ? "border-white/20 text-white"
+              : "border-gray-200 text-gray-600"
+          )}
         >
-          {tier.cta}
-          <ArrowRightIcon className="ml-2 h-4 w-4" />
-        </PolarButton>
+          Current Plan
+        </div>
       ) : (
-        <PolarButton
-          variant={isHighlighted ? "secondary" : "default"}
-          className="w-full"
-          priceId={polarPriceId || undefined}
-          productId={tier.polarProductId || undefined}
-          amount={typeof price === "number" ? price : 0}
-          currency="USD"
-          description={`${tier.name} Plan (${paymentFrequency})`}
-          metadata={{
-            plan: tier.id,
-            frequency: paymentFrequency,
-          }}
-          onCheckoutError={handleCheckoutError}
-          disabled={!polarPriceId && !tier.polarProductId}
+        <SubscriptionAwareCTA
+          targetTier={subscriptionTier}
+          defaultProductId={productId}
+          className={cn(
+            "w-full",
+            isHighlighted
+              ? "bg-white text-slate-950 hover:bg-gray-100"
+              : undefined
+          )}
         >
           {tier.cta}
-          <ArrowRightIcon className="ml-2 h-4 w-4" />
-        </PolarButton>
+        </SubscriptionAwareCTA>
       )}
     </Card>
   );

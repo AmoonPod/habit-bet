@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { User } from "@supabase/supabase-js";
 import {
@@ -25,6 +25,9 @@ import {
   CreditCardIcon,
   Clock,
   Sparkles,
+  BarChart,
+  Calendar,
+  ArrowUp,
 } from "lucide-react";
 import {
   Table,
@@ -37,6 +40,10 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UpgradePlanModal } from "@/components/billing/UpgradePlanModal";
 import { PaymentMethodModal } from "@/components/billing/PaymentMethodModal";
+import { CancelSubscriptionModal } from "@/components/billing/CancelSubscriptionModal";
+import { Badge } from "@/components/ui/badge";
+import { useSubscription } from "@/hooks/use-subscription";
+import { formatDate } from "@/lib/utils";
 
 interface PaymentHistory {
   id: string;
@@ -56,8 +63,28 @@ export default function SettingsPage() {
   const [isUpgradePlanModalOpen, setIsUpgradePlanModalOpen] = useState(false);
   const [isPaymentMethodModalOpen, setIsPaymentMethodModalOpen] =
     useState(false);
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("profile");
   const { toast } = useToast();
   const supabase = createClient();
+  const {
+    subscription,
+    isLoading: isSubscriptionLoading,
+    refresh: refreshSubscription,
+  } = useSubscription();
+
+  // Add debug logging for subscription data
+  useEffect(() => {
+    if (subscription) {
+      console.log("Current subscription data:", {
+        tier: subscription.tier,
+        isActive: subscription.isActive,
+        expiresAt: subscription.expiresAt,
+        limits: subscription.limits,
+        features: subscription.features,
+      });
+    }
+  }, [subscription]);
 
   useEffect(() => {
     async function loadData() {
@@ -133,7 +160,17 @@ export default function SettingsPage() {
     }
   };
 
-  if (isLoading) {
+  // Handle subscription cancelled (callback for CancelSubscriptionModal)
+  const handleSubscriptionCancelled = useCallback(() => {
+    refreshSubscription();
+  }, [refreshSubscription]);
+
+  // Handle tab change
+  const handleTabChange = useCallback((value: string) => {
+    setActiveTab(value);
+  }, []);
+
+  if (isLoading || isSubscriptionLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -141,8 +178,21 @@ export default function SettingsPage() {
     );
   }
 
+  // Enhance the subscription tier display
+  // Format subscription details with enhanced logging
+  const isPremium = subscription?.tier === "premium";
+  const isActive = subscription?.isActive === true;
+  const expiryDate = subscription?.expiresAt
+    ? formatDate(new Date(subscription.expiresAt))
+    : "No expiration";
+
+  // Add extra debugging output
+  console.log("Rendered with subscription tier:", subscription?.tier);
+  console.log("isPremium calculated as:", isPremium);
+
+  // Display subscription info in UI
   return (
-    <div className="container mx-auto py-8 space-y-6">
+    <div className="container mx-auto p-6 max-w-6xl space-y-8">
       <div>
         <h1 className="text-3xl font-bold">Settings</h1>
         <p className="text-muted-foreground">
@@ -150,7 +200,30 @@ export default function SettingsPage() {
         </p>
       </div>
 
-      <Tabs defaultValue="profile" className="w-full">
+      {/* Debug info in development only */}
+      {process.env.NODE_ENV === "development" && (
+        <div className="bg-yellow-100 dark:bg-yellow-900 p-4 rounded-lg mb-4 text-sm">
+          <h3 className="font-bold mb-2">Debug Info:</h3>
+          <p>
+            Subscription Tier: <code>{subscription?.tier || "none"}</code>
+          </p>
+          <p>
+            Is Premium: <code>{isPremium ? "true" : "false"}</code>
+          </p>
+          <p>
+            Is Active: <code>{isActive ? "true" : "false"}</code>
+          </p>
+          <p>
+            Features: <code>{JSON.stringify(subscription?.features)}</code>
+          </p>
+        </div>
+      )}
+
+      <Tabs
+        value={activeTab}
+        onValueChange={handleTabChange}
+        className="w-full"
+      >
         <TabsList className="grid w-full grid-cols-3 mb-8">
           <TabsTrigger value="profile" className="flex items-center gap-2">
             <UserRound className="h-4 w-4" />
@@ -271,82 +344,176 @@ export default function SettingsPage() {
                     </CardDescription>
                   </div>
                 </div>
-                <Button
-                  variant="default"
-                  onClick={() => setIsUpgradePlanModalOpen(true)}
-                >
-                  Upgrade Plan
-                </Button>
+                {!isPremium ? (
+                  <Button
+                    variant="default"
+                    onClick={() => setIsUpgradePlanModalOpen(true)}
+                  >
+                    Upgrade Plan
+                  </Button>
+                ) : (
+                  isActive && (
+                    <Button
+                      variant="outline"
+                      onClick={() => setIsCancelModalOpen(true)}
+                      className="text-destructive border-destructive/30 hover:bg-destructive/10"
+                    >
+                      Cancel Plan
+                    </Button>
+                  )
+                )}
               </div>
             </CardHeader>
             <CardContent>
               <div className="bg-muted p-6 rounded-lg mb-6">
                 <div className="flex justify-between items-start">
                   <div>
-                    <h3 className="font-medium text-lg">Free Plan</h3>
+                    <div className="flex items-center gap-2 mb-2">
+                      <h3 className="font-medium text-lg">
+                        {isPremium ? "Premium Plan" : "Free Plan"}
+                      </h3>
+                      {isActive && (
+                        <Badge
+                          variant={isPremium ? "default" : "secondary"}
+                          className="ml-2"
+                        >
+                          {isPremium ? "Premium" : "Free"}
+                        </Badge>
+                      )}
+                      {!isActive && subscription?.tier === "premium" && (
+                        <Badge variant="destructive" className="ml-2">
+                          Cancelled
+                        </Badge>
+                      )}
+                    </div>
                     <p className="text-muted-foreground mb-2">
-                      Start building better habits with real money stakes.
+                      {isPremium
+                        ? "Enjoy advanced features and unlimited habits with our premium plan."
+                        : "Start building better habits with real money stakes."}
                     </p>
-                    <ul className="space-y-1 text-sm">
-                      <li className="flex items-center">
-                        <span className="mr-2 text-primary">✓</span> Unlimited
-                        Habits
-                      </li>
-                      <li className="flex items-center">
-                        <span className="mr-2 text-primary">✓</span> Basic
-                        Insights (Progress Charts)
-                      </li>
-                      <li className="flex items-center">
-                        <span className="mr-2 text-primary">✓</span> Minimum
-                        Stake: $5 per habit
-                      </li>
+
+                    {subscription?.expiresAt && (
+                      <div className="flex items-center text-sm text-muted-foreground mt-4">
+                        <Calendar className="h-4 w-4 mr-2" />
+                        {isActive && isPremium
+                          ? `Renews on ${expiryDate}`
+                          : subscription.tier === "premium" && !isActive
+                          ? `Access until ${expiryDate}`
+                          : null}
+                      </div>
+                    )}
+
+                    <ul className="space-y-1 text-sm mt-4">
+                      {isPremium ? (
+                        <>
+                          <li className="flex items-center">
+                            <span className="mr-2 text-primary">✓</span>{" "}
+                            Unlimited Habits
+                          </li>
+                          <li className="flex items-center">
+                            <span className="mr-2 text-primary">✓</span>{" "}
+                            Advanced Insights & Analytics
+                          </li>
+                          <li className="flex items-center">
+                            <span className="mr-2 text-primary">✓</span> Minimum
+                            Stake: $1 per habit
+                          </li>
+                          <li className="flex items-center">
+                            <span className="mr-2 text-primary">✓</span>{" "}
+                            AI-powered Recommendations
+                          </li>
+                        </>
+                      ) : (
+                        <>
+                          <li className="flex items-center">
+                            <span className="mr-2 text-primary">✓</span>{" "}
+                            {subscription?.limits.habits || 5} Habits
+                          </li>
+                          <li className="flex items-center">
+                            <span className="mr-2 text-primary">✓</span> Basic
+                            Insights (Progress Charts)
+                          </li>
+                          <li className="flex items-center">
+                            <span className="mr-2 text-primary">✓</span> Minimum
+                            Stake: ${subscription?.limits.minStake || 5} per
+                            habit
+                          </li>
+                        </>
+                      )}
                     </ul>
                   </div>
                   <div className="text-right">
-                    <span className="text-3xl font-bold">Free</span>
+                    <span className="text-3xl font-bold">
+                      {isPremium ? "$4.99" : "Free"}
+                    </span>
+                    {isPremium && (
+                      <span className="text-muted-foreground">/month</span>
+                    )}
                   </div>
                 </div>
               </div>
 
-              <div className="grid md:grid-cols-2 gap-6">
-                <div className="flex items-start gap-4">
-                  <div className="p-2 rounded-full bg-muted">
-                    <CreditCard className="h-5 w-5" />
+              {isPremium && (
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div className="flex items-start gap-4">
+                    <div className="p-2 rounded-full bg-muted">
+                      <CreditCard className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h3 className="font-medium">Payment Method</h3>
+                      <p className="text-sm text-muted-foreground mb-2">
+                        Visa ending in 4242
+                      </p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setIsPaymentMethodModalOpen(true)}
+                      >
+                        Update
+                      </Button>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-medium">Payment Method</h3>
-                    <p className="text-sm text-muted-foreground mb-2">
-                      Visa ending in 4242
-                    </p>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setIsPaymentMethodModalOpen(true)}
-                    >
-                      Update
-                    </Button>
-                  </div>
-                </div>
 
-                <div className="flex items-start gap-4">
-                  <div className="p-2 rounded-full bg-muted">
-                    <Clock className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium">Billing Cycle</h3>
-                    <p className="text-sm text-muted-foreground mb-2">
-                      Monthly billing
-                    </p>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setIsUpgradePlanModalOpen(true)}
-                    >
-                      Change
-                    </Button>
+                  <div className="flex items-start gap-4">
+                    <div className="p-2 rounded-full bg-muted">
+                      <Clock className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h3 className="font-medium">Billing Cycle</h3>
+                      <p className="text-sm text-muted-foreground mb-2">
+                        Monthly billing
+                      </p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setIsUpgradePlanModalOpen(true)}
+                      >
+                        Change
+                      </Button>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
+
+              {!isPremium && (
+                <div className="border border-border rounded-lg p-4 bg-muted/30 mt-6">
+                  <div className="flex items-start gap-4">
+                    <div className="p-2 rounded-full bg-primary/10">
+                      <ArrowUp className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="font-medium">Upgrade to Premium</h3>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        Unlock unlimited habits, advanced analytics, and lower
+                        minimum stakes.
+                      </p>
+                      <Button onClick={() => setIsUpgradePlanModalOpen(true)}>
+                        View Premium Plans
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -476,11 +643,32 @@ export default function SettingsPage() {
       {/* Modals */}
       <UpgradePlanModal
         isOpen={isUpgradePlanModalOpen}
-        onClose={() => setIsUpgradePlanModalOpen(false)}
+        onClose={() => {
+          // Prevent default behavior and manually close modal
+          setIsUpgradePlanModalOpen(false);
+          // Then refresh subscription data
+          refreshSubscription();
+        }}
+        currentTier={subscription?.tier || "free"}
       />
       <PaymentMethodModal
         isOpen={isPaymentMethodModalOpen}
-        onClose={() => setIsPaymentMethodModalOpen(false)}
+        onClose={() => {
+          // Prevent default behavior and manually close modal
+          setIsPaymentMethodModalOpen(false);
+          // Then refresh subscription data
+          refreshSubscription();
+        }}
+      />
+      <CancelSubscriptionModal
+        isOpen={isCancelModalOpen}
+        onClose={() => {
+          // Prevent default behavior and manually close modal
+          setIsCancelModalOpen(false);
+          // Then refresh subscription data
+          refreshSubscription();
+        }}
+        onSuccess={handleSubscriptionCancelled}
       />
     </div>
   );

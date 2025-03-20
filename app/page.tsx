@@ -10,8 +10,21 @@ import { FAQSection } from "@/components/landing/FAQSection";
 import { Button } from "@/components/ui/button";
 import { PricingSection } from "@/components/pricing-section";
 import { Footer } from "@/components/ui/footer";
+import { useRouter } from "next/navigation";
+import { useSession } from "@/hooks/use-session";
 
 export default function Home() {
+  const router = useRouter();
+  const { session } = useSession();
+
+  const handleCtaClick = () => {
+    if (session) {
+      router.push("/dashboard");
+    } else {
+      router.push("/login");
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -64,6 +77,7 @@ export default function Home() {
                 size="lg"
                 variant="secondary"
                 className="text-sm sm:text-lg group px-4 sm:px-6"
+                onClick={handleCtaClick}
               >
                 Stake Your First Habit & Earn Success
                 <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5 transition-transform group-hover:translate-x-1" />

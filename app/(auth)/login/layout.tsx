@@ -1,18 +1,21 @@
-import "../../globals.css";
 import { createClient } from "@/utils/supabase/server";
-import { Bricolage_Grotesque } from "next/font/google";
 import { redirect } from "next/navigation";
 
-const bricolage_Grotesque = Bricolage_Grotesque({ subsets: ["latin"] });
-
-export default async function RootLayout({
+export default async function LoginLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return (
-    <html lang="en">
-      <body className={bricolage_Grotesque.className}>{children}</body>
-    </html>
-  );
+  // Optional: Check if user is already authenticated and redirect if needed
+
+  const supabase = await createClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (session) {
+    redirect("/dashboard");
+  }
+
+  return <>{children}</>;
 }

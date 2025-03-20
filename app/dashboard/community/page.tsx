@@ -43,7 +43,6 @@ export default function CommunityPage() {
   const [currentUserId, setCurrentUserId] = useState("");
   const [isCreatePostOpen, setIsCreatePostOpen] = useState(false);
   const { toast } = useToast();
-  const router = useRouter();
   const [showScoringInfo, setShowScoringInfo] = useState(false);
 
   useEffect(() => {

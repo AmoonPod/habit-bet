@@ -5,6 +5,8 @@ import { Button } from "../ui/button";
 import { ArrowRight, Coins, Target, ShieldCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Squares } from "@/components/ui/squares-background";
+import { useSession } from "@/hooks/use-session";
+import { SubscriptionAwareCTA } from "../ui/subscription-aware-cta";
 
 interface HeroSectionProps {
   title?: string;
@@ -20,9 +22,14 @@ export function HeroSection({
   onCtaClick,
 }: HeroSectionProps) {
   const router = useRouter();
+  const { session } = useSession();
 
   const handleCtaClick = () => {
-    router.push("/dashboard");
+    if (session) {
+      router.push("/dashboard");
+    } else {
+      router.push("/login");
+    }
   };
 
   return (
@@ -78,14 +85,14 @@ export function HeroSection({
             transition={{ duration: 0.5, delay: 0.4 }}
             className="flex flex-col sm:flex-row gap-3 justify-center"
           >
-            <Button
+            <SubscriptionAwareCTA
+              targetTier="free"
               size="lg"
-              onClick={onCtaClick || handleCtaClick}
               className="text-sm sm:text-lg group px-4 sm:px-6 group bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
             >
               {ctaText}
               <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5 transition-transform group-hover:translate-x-1" />
-            </Button>
+            </SubscriptionAwareCTA>
             <Button
               size="lg"
               variant="outline"

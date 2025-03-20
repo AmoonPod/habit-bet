@@ -1,47 +1,9 @@
 import * as React from "react";
-import { PricingCard, type PricingTier } from "@/components/ui/pricing-card";
+import { PricingCard } from "@/components/ui/pricing-card";
 import { Tab } from "@/components/ui/pricing-tab";
+import { TIERS } from "@/lib/tiers";
 
 export const PAYMENT_FREQUENCIES = ["monthly", "yearly"];
-
-export const TIERS = [
-  {
-    id: "free",
-    name: "Free",
-    price: {
-      monthly: "Free",
-      yearly: "Free",
-    },
-    description: "Start building better habits with real money stakes.",
-    features: [
-      "Unlimited Habits",
-      "Basic Insights (Progress Charts)",
-      "Minimum Stake: $5 per habit",
-      "Real Money Stakes", // Updated phrasing
-    ],
-    cta: "Get Started",
-  },
-  {
-    id: "premium",
-    name: "Premium",
-    price: {
-      monthly: 4.99,
-      yearly: 49.99,
-    },
-    description:
-      "Supercharge your habit-building with advanced insights and AI-powered recommendations.",
-    features: [
-      "All Free Features",
-      "Pro Insights (Advanced Analytics)",
-      "AI Features (Personalized Recommendations)",
-      "Minimum Stake: $1 per habit",
-      "Lower Staking Limits",
-    ],
-    cta: "Upgrade to Premium",
-    popular: true, // You can mark this as the most popular plan
-  },
-  // Removed the other tiers as they don't fit our model
-];
 
 export function PricingSection() {
   const [selectedFrequency, setSelectedFrequency] = React.useState(

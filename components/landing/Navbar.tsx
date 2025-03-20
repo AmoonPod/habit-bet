@@ -3,14 +3,24 @@ import { Button } from "@/components/ui/button";
 import { LogIn } from "lucide-react";
 import { Logo } from "../ui/logo";
 import { useRouter } from "next/navigation";
+import { useSession } from "@/hooks/use-session";
 
 export function Navbar() {
   const router = useRouter();
+  const { session } = useSession();
 
   const scrollToSection = (sectionId: string) => {
     const element = document.getElementById(sectionId);
     if (element) {
       element.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
+  const handleLoginClick = () => {
+    if (session) {
+      router.push("/dashboard");
+    } else {
+      router.push("/login");
     }
   };
 
@@ -44,10 +54,10 @@ export function Navbar() {
           <Button
             variant="default"
             className="text-sm"
-            onClick={() => router.push("/login")}
+            onClick={handleLoginClick}
           >
             <LogIn className="mr-2 h-4 w-4" />
-            Start Free
+            {session ? "Dashboard" : "Start Free"}
           </Button>
         </div>
 
@@ -55,7 +65,7 @@ export function Navbar() {
           variant="ghost"
           size="icon"
           className="md:hidden"
-          onClick={() => router.push("/dashboard")}
+          onClick={handleLoginClick}
         >
           <LogIn className="h-5 w-5" />
         </Button>

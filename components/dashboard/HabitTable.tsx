@@ -183,7 +183,7 @@ export default function HabitTable({
           const stakeAmount = getStakeAmount(habit);
 
           return (
-            <Link href={`/dashboard/${habit.slug}`} key={habit.uuid}>
+            <Link href={`/dashboard/${habit.slug}`} key={habit.uuid} prefetch>
               <Card
                 className="cursor-pointer hover:shadow-md transition-shadow border-l-4"
                 style={{ borderLeftColor: habit.color || "#4F46E5" }}

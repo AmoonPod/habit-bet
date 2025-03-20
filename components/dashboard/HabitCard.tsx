@@ -129,7 +129,7 @@ export default function HabitCard({
   };
 
   return (
-    <Link href={`/dashboard/${habit.slug}`}>
+    <Link href={`/dashboard/${habit.slug}`} prefetch>
       <Card className="w-full hover:shadow-md transition-shadow cursor-pointer">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">{habit.name}</CardTitle>
