@@ -48,7 +48,7 @@ export function TestimonialsSection({
           Don't Just Take Our Word For It
         </h2>
         <p className="text-center text-xl text-muted-foreground max-w-2xl mx-auto mb-12">
-          See what real people are saying about HabitStake
+          See what real people are saying about HabitBet
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">

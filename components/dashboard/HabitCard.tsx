@@ -13,7 +13,10 @@ import {
   addDays,
   addWeeks,
   addMonths,
+  parseISO,
+  format,
 } from "date-fns";
+import { calculateHabitProgress } from "@/lib/progress-calculation";
 
 interface HabitCardProps {
   habit: Tables<"habits">;
@@ -43,30 +46,9 @@ export default function HabitCard({
       return;
     }
 
-    // Count successful check-ins
-    const successfulCheckins = checkins.filter(
-      (checkin) =>
-        checkin.habit_uuid === habit.uuid && checkin.status === "true"
-    ).length;
-
-    // Calculate total required check-ins for the entire habit duration
-    const totalRequiredCheckins = habit.frequency_value * habit.duration_value;
-
-    // Calculate percentage based on total required check-ins for the entire duration
-    const percentage = Math.round(
-      (successfulCheckins / totalRequiredCheckins) * 100
-    );
-
-    // Limit percentage to 100%
-    setCompletionPercentage(Math.min(percentage, 100));
-
-    // Debug
-    console.log({
-      habit: habit.name,
-      successfulCheckins,
-      totalRequiredCheckins,
-      percentage,
-    });
+    // Use the centralized calculation function
+    const { progressPercentage } = calculateHabitProgress(habit, checkins);
+    setCompletionPercentage(progressPercentage);
   };
 
   const calculateTimeLeft = () => {
@@ -95,36 +77,54 @@ export default function HabitCard({
 
     const now = new Date();
 
-    // Mostra il tempo rimanente nella stessa unità della frequenza dell'abitudine
-    // per una migliore comprensione da parte dell'utente
+    // Show time left in the same unit as the habit frequency
+    // for better user understanding
     if (habit.frequency_unit === "day") {
-      // Se la frequenza è giornaliera, mostra i giorni rimanenti
+      // If the frequency is daily, show days left
       const daysLeft = Math.max(0, differenceInDays(endDate, now));
       setTimeLeft({
         value: daysLeft,
         unit: daysLeft === 1 ? "day" : "days",
       });
     } else if (habit.frequency_unit === "week") {
-      // Se la frequenza è settimanale, mostra le settimane rimanenti
+      // If the frequency is weekly, show weeks left
       const weeksLeft = Math.max(0, differenceInWeeks(endDate, now));
       setTimeLeft({
         value: weeksLeft,
         unit: weeksLeft === 1 ? "week" : "weeks",
       });
     } else if (habit.frequency_unit === "month") {
-      // Se la frequenza è mensile, mostra i mesi rimanenti
+      // If the frequency is monthly, show months left
       const monthsLeft = Math.max(0, differenceInMonths(endDate, now));
       setTimeLeft({
         value: monthsLeft,
         unit: monthsLeft === 1 ? "month" : "months",
       });
     } else {
-      // Fallback a giorni se la frequenza non è specificata
+      // Fallback to days if the frequency is not specified
       const daysLeft = Math.max(0, differenceInDays(endDate, now));
       setTimeLeft({
         value: daysLeft,
         unit: daysLeft === 1 ? "day" : "days",
       });
+    }
+  };
+
+  // Helper function to calculate elapsed time in the appropriate unit
+  const calculateElapsedTime = (
+    startDate: Date,
+    currentDate: Date,
+    unit: string
+  ): number => {
+    switch (unit) {
+      case "day":
+        return Math.max(0, differenceInDays(currentDate, startDate)) + 1; // +1 to include today
+      case "week":
+        return Math.max(0, differenceInWeeks(currentDate, startDate)) + 1; // +1 to include current week
+      case "month":
+        return Math.max(0, differenceInMonths(currentDate, startDate)) + 1; // +1 to include current month
+      default:
+        return 1;
     }
   };
 

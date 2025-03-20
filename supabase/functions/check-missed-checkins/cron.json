@@ -1,0 +1,6 @@
+{
+  "schedule": "0 0 * * *",
+  "timezone": "utc",
+  "retries": 3,
+  "retry_interval": "10min"
+}

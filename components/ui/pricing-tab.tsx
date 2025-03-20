@@ -1,14 +1,15 @@
-import * as React from "react"
-import { motion } from "framer-motion"
+import * as React from "react";
+import { motion } from "framer-motion";
 
-import { cn } from "@/lib/utils"
-import { Badge } from "@/components/ui/badge"
+import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 
 interface TabProps {
-  text: string
-  selected: boolean
-  setSelected: (text: string) => void
-  discount?: boolean
+  text: string;
+  selected: boolean;
+  setSelected: (text: string) => void;
+  discount?: boolean;
+  discountPercentage?: number;
 }
 
 export function Tab({
@@ -16,6 +17,7 @@ export function Tab({
   selected,
   setSelected,
   discount = false,
+  discountPercentage = 35,
 }: TabProps) {
   return (
     <button
@@ -42,9 +44,9 @@ export function Tab({
             selected && "bg-slate-100 dark:bg-slate-800"
           )}
         >
-          Save 35%
+          Save {discountPercentage}%
         </Badge>
       )}
     </button>
-  )
+  );
 }

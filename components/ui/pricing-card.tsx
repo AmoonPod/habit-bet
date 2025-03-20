@@ -6,11 +6,13 @@ import NumberFlow from "@number-flow/react";
 
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ArrowRightIcon } from "@radix-ui/react-icons";
+import PolarButton from "@/components/ui/polar-button";
+import { useToast } from "@/components/ui/use-toast";
 
 export interface PricingTier {
+  id: string;
   name: string;
   price: Record<string, number | string>;
   description: string;
@@ -18,6 +20,11 @@ export interface PricingTier {
   cta: string;
   highlighted?: boolean;
   popular?: boolean;
+  polarPriceId?: {
+    monthly?: string;
+    yearly?: string;
+  };
+  polarProductId?: string; // For one-time purchases
 }
 
 interface PricingCardProps {
@@ -29,6 +36,23 @@ export function PricingCard({ tier, paymentFrequency }: PricingCardProps) {
   const price = tier.price[paymentFrequency];
   const isHighlighted = tier.highlighted;
   const isPopular = tier.popular;
+  const { toast } = useToast();
+
+  // Get the appropriate Polar price ID based on the payment frequency
+  const polarPriceId =
+    tier.polarPriceId?.[paymentFrequency as keyof typeof tier.polarPriceId];
+
+  // Handle checkout errors
+  const handleCheckoutError = (error: Error) => {
+    toast({
+      title: "Checkout Error",
+      description: "There was a problem initiating checkout. Please try again.",
+      variant: "destructive",
+    });
+  };
+
+  // Determine if the tier is free
+  const isFree = typeof price === "string" && price.toLowerCase() === "free";
 
   return (
     <Card
@@ -65,7 +89,7 @@ export function PricingCard({ tier, paymentFrequency }: PricingCardProps) {
               className="text-4xl font-medium"
             />
             <p className="-mt-2 text-xs text-slate-500 dark:text-slate-400">
-              Per month
+              Per {paymentFrequency === "yearly" ? "year" : "month"}
             </p>
           </>
         ) : (
@@ -93,13 +117,41 @@ export function PricingCard({ tier, paymentFrequency }: PricingCardProps) {
         </ul>
       </div>
 
-      <Button
-        variant={isHighlighted ? "secondary" : "default"}
-        className="w-full"
-      >
-        {tier.cta}
-        <ArrowRightIcon className="ml-2 h-4 w-4" />
-      </Button>
+      {isFree ? (
+        <PolarButton
+          variant={isHighlighted ? "secondary" : "default"}
+          className="w-full"
+          // Ensure at least one of these is provided
+          productId={tier.polarProductId || undefined}
+          priceId={polarPriceId || undefined}
+          description={`Sign up for ${tier.name} plan`}
+          onCheckoutError={handleCheckoutError}
+          // Disable button if neither ID is available
+          disabled={!tier.polarProductId && !polarPriceId}
+        >
+          {tier.cta}
+          <ArrowRightIcon className="ml-2 h-4 w-4" />
+        </PolarButton>
+      ) : (
+        <PolarButton
+          variant={isHighlighted ? "secondary" : "default"}
+          className="w-full"
+          priceId={polarPriceId || undefined}
+          productId={tier.polarProductId || undefined}
+          amount={typeof price === "number" ? price : 0}
+          currency="USD"
+          description={`${tier.name} Plan (${paymentFrequency})`}
+          metadata={{
+            plan: tier.id,
+            frequency: paymentFrequency,
+          }}
+          onCheckoutError={handleCheckoutError}
+          disabled={!polarPriceId && !tier.polarProductId}
+        >
+          {tier.cta}
+          <ArrowRightIcon className="ml-2 h-4 w-4" />
+        </PolarButton>
+      )}
     </Card>
   );
 }

@@ -25,7 +25,12 @@ import {
   Check,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { getHabits, getHabitCheckins, getHabitStakes } from "./actions";
+import {
+  getHabits,
+  getHabitCheckins,
+  getHabitStakes,
+  getMissedCheckins,
+} from "./actions";
 import HabitProgressBar from "@/components/dashboard/HabitProgressBar";
 import {
   format,
@@ -48,12 +53,16 @@ import CompletionTrendSection from "@/components/dashboard/CompletionTrendSectio
 import NewHabitDialog from "@/components/dashboard/NewHabitDialog";
 import StatusBadge from "@/components/dashboard/StatusBadge";
 import ResponsiveHabitRow from "@/components/dashboard/ResponsiveHabitRow";
+import MissedCheckInsAlert from "@/components/habit/MissedCheckInsAlert";
 
 export default async function DashboardPage() {
   // Fetch data
   const habits = await getHabits();
   const stakes = await getHabitStakes();
   const allCheckins = await getHabitCheckins();
+
+  // Get all missed check-ins
+  const missedCheckins = await getMissedCheckins();
 
   // Separate active and failed habits
   const activeHabits = habits.filter((habit) => habit.status !== "failed");
@@ -178,13 +187,20 @@ export default async function DashboardPage() {
     <div className="w-full p-3 md:p-8 space-y-4 md:space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-xl md:text-2xl font-bold tracking-tight">Dashboard</h1>
+          <h1 className="text-xl md:text-2xl font-bold tracking-tight">
+            Dashboard
+          </h1>
           <p className="text-sm text-muted-foreground">
             Track your habits, monitor progress, and build consistency
           </p>
         </div>
         <NewHabitDialog />
       </div>
+
+      {/* Display missed check-ins alert if any */}
+      {missedCheckins.length > 0 && (
+        <MissedCheckInsAlert missedCheckins={missedCheckins} />
+      )}
 
       {/* All Habits Table (moved to top) */}
       <div className="border rounded-lg shadow-sm bg-card overflow-hidden">
@@ -215,11 +231,6 @@ export default async function DashboardPage() {
             const habitCheckins = allCheckins.filter(
               (checkin) => checkin.habit_uuid === habit.uuid
             );
-            const totalCheckins = habitCheckins.length;
-            const successfulCheckins = habitCheckins.filter(
-              (c) => c.status === "true"
-            ).length;
-
             // Find matching stake
             const stake = stakes.find((s) => s.uuid === habit.stake_uuid);
 
@@ -231,11 +242,15 @@ export default async function DashboardPage() {
                   className="hidden md:block hover:bg-muted/30 transition-colors"
                 >
                   <div className="grid grid-cols-6 p-4 items-center">
-                    <div className="col-span-2 font-medium truncate">{habit.name}</div>
+                    <div className="col-span-2 font-medium truncate">
+                      {habit.name}
+                    </div>
                     <div className="whitespace-nowrap">
                       {habit.frequency_value}x per {habit.frequency_unit}
                     </div>
-                    <div className="whitespace-nowrap">{stake ? `$${stake.amount}` : "No stake"}</div>
+                    <div className="whitespace-nowrap">
+                      {stake ? `$${stake.amount}` : "No stake"}
+                    </div>
                     <div className="pr-4">
                       <HabitProgressBar
                         habit={habit}
@@ -292,7 +307,10 @@ export default async function DashboardPage() {
                       {stake ? `$${stake.amount}` : "No stake"}
                     </div>
                     <div className="pr-4">
-                      <HabitProgressBar habit={habit} checkins={habitCheckins} />
+                      <HabitProgressBar
+                        habit={habit}
+                        checkins={habitCheckins}
+                      />
                     </div>
                     <div>
                       <StatusBadge status="failed" />
@@ -300,7 +318,7 @@ export default async function DashboardPage() {
                   </div>
                 </Link>
 
-                {/* Mobile view for failed habits */}
+                {/* Mobile view */}
                 <div className="md:hidden">
                   <ResponsiveHabitRow
                     habit={habit}
@@ -357,8 +375,9 @@ export default async function DashboardPage() {
               <div
                 className="h-full bg-green-500 rounded-full"
                 style={{
-                  width: `${(activeStakedAmount / Math.max(totalStakedAmount, 1)) * 100
-                    }%`,
+                  width: `${
+                    (activeStakedAmount / Math.max(totalStakedAmount, 1)) * 100
+                  }%`,
                 }}
               />
             </div>

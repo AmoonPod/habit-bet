@@ -1,24 +1,70 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Habit Bet - Track habits, set stakes, and achieve your goals
 
-## Getting Started
+A comprehensive habit tracking app with monetary stakes to keep you accountable.
 
-First, run the development server:
+## Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- Track habits with customizable frequency and duration
+- Set monetary stakes for added accountability
+- View detailed habit insights and analytics
+- Receive notifications for missed check-ins
+- Online payment processing with Polar.sh
+
+## Polar.sh Integration
+
+The application uses [Polar.sh](https://polar.sh) as the payment processor for premium subscriptions and habit stakes.
+
+### Setup Instructions
+
+1. Sign up for a Polar.sh account at https://polar.sh
+2. Create an organization and obtain your organization ID
+3. Create products in the Polar dashboard:
+   - Free tier product
+   - Premium subscription product with monthly and yearly price options
+   - Habit stake payment product
+4. Add the following environment variables to your `.env.local` file:
+   ```
+   NEXT_PUBLIC_POLAR_ORG_ID=your-organization-id
+   NEXT_PUBLIC_POLAR_ACCESS_TOKEN=your-polar-api-token
+   ```
+
+### Key Integration Points
+
+The Polar.sh integration is implemented in the following components:
+
+- **Pricing Section**: Displays pricing tiers fetched from Polar.sh
+- **Product Cards**: Display individual products from Polar.sh
+- **Checkout Page**: Processes payments for products
+- **Failed Habit Payment**: Handles stake payments when habits fail
+
+## Development
+
+### Prerequisites
+
+- Node.js 18+
+- npm/yarn/pnpm
+
+### Installation
+
+```
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Running the development server
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```
+npm run dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Building for production
+
+```
+npm run build
+```
+
+## License
+
+[MIT](LICENSE)
 
 ## Learn More
 

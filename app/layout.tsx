@@ -5,7 +5,7 @@ import "./globals.css";
 const bricolage_Grotesque = Bricolage_Grotesque({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Habit Bet",
+  title: "HabitBet",
   description: "Track habits, set stakes, and build consistency",
   manifest: "/manifest.json",
   themeColor: "#4F46E5",
@@ -18,9 +18,9 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Habit Bet",
+    title: "HabitBet",
   },
-  applicationName: "Habit Bet",
+  applicationName: "HabitBet",
   formatDetection: {
     telephone: false,
   },

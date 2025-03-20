@@ -13,9 +13,7 @@ export function Logo({ className, hideText }: LogoProps) {
         <Coins className="w-6 h-6 text-primary" />
         <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-background" />
       </div>
-      {!hideText && (
-        <span className="font-bold tracking-tight">habitstake</span>
-      )}
+      {!hideText && <span className="font-bold tracking-tight">HabitBet</span>}
     </div>
   );
 }

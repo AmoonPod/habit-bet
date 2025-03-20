@@ -1,10 +1,9 @@
-"use client"
+"use client";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { getOAuthURL } from "./action";
 
 // Create the server action
-
 
 function LoginButton() {
   const [isLoading, setIsLoading] = useState(false);
@@ -30,10 +29,7 @@ function LoginButton() {
   };
 
   return (
-    <Button
-      onClick={handleSignIn}
-      disabled={isLoading}
-    >
+    <Button onClick={handleSignIn} disabled={isLoading}>
       {isLoading ? "Redirecting..." : "Login with Google"}
     </Button>
   );
@@ -45,8 +41,10 @@ export default function LoginPage() {
     <div className="flex min-h-screen flex-col items-center justify-center">
       <div className="w-full max-w-md space-y-8 p-8">
         <div className="text-center">
-          <h1 className="text-3xl font-bold">Habit Bet</h1>
-          <p className="mt-2 text-sm text-gray-600">Sign in to continue to your account</p>
+          <h1 className="text-3xl font-bold">HabitBet</h1>
+          <p className="mt-2 text-sm text-gray-600">
+            Sign in to continue to your account
+          </p>
         </div>
         <div className="mt-8 flex justify-center">
           <LoginButton />

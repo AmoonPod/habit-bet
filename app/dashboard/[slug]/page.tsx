@@ -1,15 +1,16 @@
-import { getHabitBySlug, getStakeByUuid, getHabitCheckins } from "../actions";
-import { Tables } from "@/supabase/models/database.types";
+import {
+  getHabitBySlug,
+  getStakeByUuid,
+  getHabitCheckins,
+  getMissedCheckins,
+} from "../actions";
 import CheckInSection from "@/components/habit/CheckInSection";
 import HabitHeader from "@/components/habit/HabitHeader";
-import {
-  calculateCurrentStreak,
-  calculateNextCheckInDate,
-} from "@/lib/habit-calculations";
-import MissingCheckInsCard from "@/components/habit/MissingCheckInsCard";
+import { calculateCurrentStreak } from "@/lib/habit-calculations";
+import { calculateHabitProgress } from "@/lib/progress-calculation";
 import CheckInsList from "@/components/habit/CheckInsList";
 import HabitProgress from "@/components/habit/HabitProgress";
-import FirstCheckInButton from "@/components/habit/FirstCheckInButton";
+import FailedHabitPayment from "@/components/habit/FailedHabitPayment";
 import {
   Trophy,
   Calendar,
@@ -25,19 +26,20 @@ import {
   format,
   differenceInDays,
   parseISO,
-  isAfter,
   endOfWeek,
   endOfMonth,
-  endOfDay,
   startOfDay,
 } from "date-fns";
+import MissedCheckInsAlert from "@/components/habit/MissedCheckInsAlert";
+import { createClient } from "@/utils/supabase/client";
 
 export default async function HabitPage({
   params,
 }: {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }) {
-  const habit = await getHabitBySlug(params.slug);
+  const { slug } = await params;
+  const habit = await getHabitBySlug(slug);
   if (!habit) {
     return <div>Habit not found</div>;
   }
@@ -54,35 +56,30 @@ export default async function HabitPage({
   );
   const hasCheckins = habitCheckins.length > 0;
 
+  // Get any missed check-ins for this habit
+  const missedCheckins = await getMissedCheckins(habit.uuid);
+
   // Calculate stats
   const currentStreak = calculateCurrentStreak(habitCheckins, habit);
-  const nextCheckInDate = calculateNextCheckInDate(habit, habitCheckins);
 
   // Calculate success rate
   const successfulCheckins = habitCheckins.filter(
     (c) => c.status === "true"
   ).length;
-  const totalCheckins = habitCheckins.length;
 
   // Calculate overall completion progress
   // This shows how far along the user is in their total commitment
   let totalRequiredCheckins = 0;
+  let completionProgress = 0;
+
   if (habit.frequency_value && habit.duration_value) {
-    totalRequiredCheckins = habit.frequency_value * habit.duration_value;
+    // Use the centralized calculation function for consistent progress calculation
+    const { progressPercentage, totalRequiredCheckins: requiredCheckins } =
+      calculateHabitProgress(habit, habitCheckins);
+
+    completionProgress = progressPercentage;
+    totalRequiredCheckins = requiredCheckins;
   }
-
-  const completionProgress =
-    totalRequiredCheckins > 0
-      ? Math.min(
-        100,
-        Math.round((successfulCheckins / totalRequiredCheckins) * 100)
-      )
-      : 0;
-
-  // Calculate days active
-  const daysSinceStart = habit.start_date
-    ? differenceInDays(new Date(), parseISO(habit.start_date))
-    : differenceInDays(new Date(), new Date(habit.created_at));
 
   // Get unique dates with check-ins - for days active calculation
   const uniqueCheckInDates = new Set();
@@ -96,13 +93,6 @@ export default async function HabitPage({
 
   // Calculate most consistent day
   const dayCount = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
-  const successDays = habitCheckins
-    .filter((c) => c.status === "true")
-    .forEach((c) => {
-      const day = new Date(c.created_at).getDay();
-      dayCount[day as keyof typeof dayCount] += 1;
-    });
-
   // Find the day with the most check-ins
   let mostConsistentDayIndex = 0;
   let maxCount = 0;
@@ -190,76 +180,98 @@ export default async function HabitPage({
     }
 
     if (habit.frequency_unit === "day") {
-      return `${frequencyValue - checkInsRemaining
-        }/${frequencyValue} check-ins completed today`;
+      return `${
+        frequencyValue - checkInsRemaining
+      }/${frequencyValue} check-ins completed today`;
     } else if (habit.frequency_unit === "week") {
-      return `${frequencyValue - checkInsRemaining
-        }/${frequencyValue} check-ins completed this week`;
+      return `${
+        frequencyValue - checkInsRemaining
+      }/${frequencyValue} check-ins completed this week`;
     } else {
       // month
-      return `${frequencyValue - checkInsRemaining
-        }/${frequencyValue} check-ins completed this month`;
+      return `${
+        frequencyValue - checkInsRemaining
+      }/${frequencyValue} check-ins completed this month`;
     }
   };
 
   const progressText = getProgressText();
-
+  const supabaseClient = await createClient();
+  await supabaseClient.functions.invoke("check-missed-checkins");
   return (
     <div className="p-3 md:p-6 space-y-4 md:space-y-6 w-full">
       <HabitHeader habit={habit} hasCheckins={hasCheckins} />
 
-      {/* Main Check-in Section with Clear Progress Indicator */}
-      <div
-        className="mb-4 md:mb-6 bg-card rounded-lg border shadow-sm overflow-hidden"
-        id="check-in-section"
-      >
-        <div className="bg-muted/30 p-3 md:p-4 border-b">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
-            <div>
-              <h2 className="text-lg md:text-xl font-semibold line-clamp-1">{habit.name}</h2>
-              <p className="text-sm text-muted-foreground">
-                {stake ? `$${stake.amount} at stake` : "No stake"} ·{" "}
-                {habit.frequency_value}x per {habit.frequency_unit}
-              </p>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2 mt-2 md:mt-0">
-              <div className="text-xs md:text-sm px-2 md:px-3 py-1 bg-blue-50 text-blue-700 rounded-full">
-                {progressText}
-              </div>
-              {checkInsRemaining > 0 && (
-                <div className="text-xs md:text-sm px-2 md:px-3 py-1 bg-amber-50 text-amber-700 rounded-full flex items-center gap-1">
-                  <Clock className="h-3 w-3" />
-                  <span>Due {deadlineText}</span>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {stake && !isFailed && (
-          <div className="p-3 md:p-4">
-            <CheckInSection habit={habit} stake={stake} />
-          </div>
-        )}
-      </div>
-
-      {/* Show missing check-ins card if the habit has a start date */}
-      {habit.start_date && !isFailed && (
-        <MissingCheckInsCard habit={habit} checkins={habitCheckins} />
+      {/* Show missed check-ins alert if there are any */}
+      {missedCheckins.length > 0 && !isFailed && (
+        <MissedCheckInsAlert
+          missedCheckins={missedCheckins}
+          forHabitPage={true}
+        />
       )}
 
-      {/* Status Banner for Failed Habits */}
+      {/* Status Banner and Payment for Failed Habits */}
       {isFailed && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-3 md:p-4 mb-4 md:mb-6">
-          <div className="flex items-center">
-            <AlertCircle className="h-4 md:h-5 w-4 md:w-5 text-red-500 mr-2" />
-            <h3 className="font-medium text-sm md:text-base text-red-800">This habit has failed</h3>
+        <>
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3 md:p-4 mb-4 md:mb-6">
+            <div className="flex items-center">
+              <AlertCircle className="h-4 md:h-5 w-4 md:w-5 text-red-500 mr-2" />
+              <h3 className="font-medium text-sm md:text-base text-red-800">
+                This habit has failed
+              </h3>
+            </div>
+            <p className="text-xs md:text-sm text-red-700 mt-1">
+              You missed a required check-in. This habit can no longer be edited
+              or deleted.
+            </p>
           </div>
-          <p className="text-xs md:text-sm text-red-700 mt-1">
-            You missed a required check-in. This habit can no longer be edited
-            or deleted.
-          </p>
+
+          {/* Failed Habit Payment Component */}
+          {stake && (
+            <div className="mb-4 md:mb-6">
+              <FailedHabitPayment habit={habit} stake={stake} />
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Main Check-in Section with Clear Progress Indicator */}
+      {!isFailed && (
+        <div
+          className="mb-4 md:mb-6 bg-card rounded-lg border shadow-sm overflow-hidden"
+          id="check-in-section"
+        >
+          <div className="bg-muted/30 p-3 md:p-4 border-b">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
+              <div>
+                <h2 className="text-lg md:text-xl font-semibold line-clamp-1">
+                  {habit.name}
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  {stake ? `$${stake.amount} at stake` : "No stake"} ·{" "}
+                  {habit.frequency_value}x per {habit.frequency_unit}
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 mt-2 md:mt-0">
+                <div className="text-xs md:text-sm px-2 md:px-3 py-1 bg-blue-50 text-blue-700 rounded-full">
+                  {progressText}
+                </div>
+                {checkInsRemaining > 0 && (
+                  <div className="text-xs md:text-sm px-2 md:px-3 py-1 bg-amber-50 text-amber-700 rounded-full flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    <span>Due {deadlineText}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {stake && (
+            <div className="p-3 md:p-4">
+              <CheckInSection habit={habit} stake={stake} />
+            </div>
+          )}
         </div>
       )}
 
@@ -275,14 +287,16 @@ export default async function HabitPage({
             <div>
               <div className="flex items-center gap-2">
                 <Flame className="h-4 md:h-5 w-4 md:w-5 text-orange-500" />
-                <span className="text-xl md:text-2xl font-bold">{currentStreak}</span>
+                <span className="text-xl md:text-2xl font-bold">
+                  {currentStreak}
+                </span>
               </div>
               <p className="text-xs md:text-sm text-muted-foreground mt-1">
                 {habit.frequency_unit === "day"
                   ? "Days streak"
                   : habit.frequency_unit === "week"
-                    ? "Weeks streak"
-                    : "Months streak"}
+                  ? "Weeks streak"
+                  : "Months streak"}
               </p>
             </div>
 
@@ -363,6 +377,30 @@ export default async function HabitPage({
                   </div>
                 </li>
               )}
+              {/* Start Date */}
+              <li className="flex items-start">
+                <Calendar className="h-4 w-4 text-muted-foreground mt-0.5 mr-2 shrink-0" />
+                <div>
+                  <p className="text-xs md:text-sm break-words">
+                    <span className="font-medium">Start date:</span>{" "}
+                    {habit.start_date
+                      ? format(parseISO(habit.start_date), "MMM d, yyyy")
+                      : format(new Date(habit.created_at), "MMM d, yyyy")}
+                  </p>
+                </div>
+              </li>
+              {/* End Date */}
+              <li className="flex items-start">
+                <Calendar className="h-4 w-4 text-muted-foreground mt-0.5 mr-2 shrink-0" />
+                <div>
+                  <p className="text-xs md:text-sm break-words">
+                    <span className="font-medium">End date:</span>{" "}
+                    {habit.end_date
+                      ? format(parseISO(habit.end_date), "MMM d, yyyy")
+                      : "Not specified"}
+                  </p>
+                </div>
+              </li>
               {stake && (
                 <li className="flex items-start">
                   <Trophy className="h-4 w-4 text-yellow-500 mt-0.5 mr-2 shrink-0" />
@@ -397,7 +435,7 @@ export default async function HabitPage({
                 style={{
                   width: `${Math.round(
                     ((frequencyValue - checkInsRemaining) / frequencyValue) *
-                    100
+                      100
                   )}%`,
                 }}
               />
@@ -417,8 +455,8 @@ export default async function HabitPage({
                   {habit.frequency_unit === "day"
                     ? "the end of today"
                     : habit.frequency_unit === "week"
-                      ? "Sunday"
-                      : "the end of the month"}{" "}
+                    ? "Sunday"
+                    : "the end of the month"}{" "}
                   to avoid failing this habit.
                 </span>
               </p>
@@ -450,7 +488,6 @@ export default async function HabitPage({
           <p className="text-sm md:text-base text-muted-foreground mb-4">
             No check-ins yet. Start tracking your habit to see your streak.
           </p>
-          <FirstCheckInButton />
         </div>
       )}
     </div>

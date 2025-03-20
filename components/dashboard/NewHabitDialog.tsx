@@ -553,10 +553,10 @@ export default function NewHabitDialog({
             {step === 1
               ? "Basic Info"
               : step === 2
-                ? "Frequency"
-                : step === 3
-                  ? "Stake"
-                  : "Duration"}
+              ? "Frequency"
+              : step === 3
+              ? "Stake"
+              : "Duration"}
           </DialogDescription>
         </DialogHeader>
         <div className="py-4">

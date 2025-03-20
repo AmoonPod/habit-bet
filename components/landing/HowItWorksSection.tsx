@@ -40,7 +40,7 @@ export function HowItWorksSection() {
             transition={{ duration: 0.5 }}
             className="text-4xl font-bold tracking-tight mb-4"
           >
-            How habitstake Works
+            How Habit Bet Works
           </motion.h2>
           <motion.p
             initial={{ opacity: 0, y: 20 }}
