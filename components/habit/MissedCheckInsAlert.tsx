@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { format, formatDistanceToNow } from "date-fns";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -51,11 +51,13 @@ type MissedCheckin = {
 interface MissedCheckInsAlertProps {
   missedCheckins: MissedCheckin[];
   forHabitPage?: boolean;
+  onActionComplete?: () => void;
 }
 
 export default function MissedCheckInsAlert({
   missedCheckins,
   forHabitPage = false,
+  onActionComplete,
 }: MissedCheckInsAlertProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedMissedCheckin, setSelectedMissedCheckin] =
@@ -64,31 +66,23 @@ export default function MissedCheckInsAlert({
   const [actionType, setActionType] = useState<"complete" | "fail" | null>(
     null
   );
+  const [localMissedCheckins, setLocalMissedCheckins] = useState<
+    MissedCheckin[]
+  >([]);
   const { toast } = useToast();
   const router = useRouter();
 
-  if (!missedCheckins || missedCheckins.length === 0) {
+  // Initialize local state from props
+  useEffect(() => {
+    setLocalMissedCheckins(missedCheckins || []);
+  }, [missedCheckins]);
+
+  if (!localMissedCheckins || localMissedCheckins.length === 0) {
     return null;
   }
 
-  // Helper function to handle refreshing based on context
-  const refreshPage = () => {
-    console.log("Refreshing page after action completion");
-    // Use a small delay to ensure server-side changes have propagated
-    setTimeout(() => {
-      router.refresh();
-
-      // If we're on a habit page and have the slug, we can also refresh that specific page
-      if (forHabitPage && selectedMissedCheckin?.habits?.slug) {
-        console.log(
-          `Refreshing habit page: ${selectedMissedCheckin.habits.slug}`
-        );
-      }
-    }, 800);
-  };
-
   // Sort by grace period end (most urgent first)
-  const sortedMissedCheckins = [...missedCheckins].sort(
+  const sortedMissedCheckins = [...localMissedCheckins].sort(
     (a, b) =>
       new Date(a.grace_period_end).getTime() -
       new Date(b.grace_period_end).getTime()
@@ -121,6 +115,24 @@ export default function MissedCheckInsAlert({
         selectedMissedCheckin.habits?.name
       );
 
+      // Optimistically update the local state
+      setLocalMissedCheckins((prevCheckins) =>
+        prevCheckins.filter((mc) => mc.uuid !== selectedMissedCheckin.uuid)
+      );
+
+      // Close the dialog immediately for better UX
+      setIsDialogOpen(false);
+
+      // Show optimistic toast
+      toast({
+        title: action === "complete" ? "Check-ins Completed" : "Habit Failed",
+        description:
+          action === "complete"
+            ? "Missing check-ins have been retroactively completed."
+            : "The habit has been marked as failed.",
+        variant: action === "complete" ? "default" : "destructive",
+      });
+
       // Call the server action to resolve the missed check-in
       const result = await resolveMissedCheckin(
         selectedMissedCheckin.uuid,
@@ -130,28 +142,21 @@ export default function MissedCheckInsAlert({
       console.log("Server action response:", result);
 
       if (result.success) {
-        // Show success toast
-        toast({
-          title: action === "complete" ? "Check-ins Completed" : "Habit Failed",
-          description: result.message,
-          variant: action === "complete" ? "default" : "destructive",
-        });
-
-        // Close the dialog
-        setIsDialogOpen(false);
-
-        // Force a delay to ensure database changes have been applied
-        await new Promise((resolve) => setTimeout(resolve, 500));
-
-        // Refresh the page to show updated data
-        refreshPage();
-
-        // Force reload after a short delay to ensure server state is fresh
-        setTimeout(() => {
-          window.location.reload();
-        }, 1200);
+        // Trigger refresh in parent component without forcing page reload
+        if (onActionComplete) {
+          onActionComplete();
+        } else {
+          // Use router.refresh as a fallback, which is less disruptive
+          router.refresh();
+        }
       } else {
         console.error("Server action returned error:", result.message);
+
+        // Revert the optimistic update if there was an error
+        if (missedCheckins) {
+          setLocalMissedCheckins(missedCheckins);
+        }
+
         // Show error toast
         toast({
           title: "Error",
@@ -161,6 +166,11 @@ export default function MissedCheckInsAlert({
       }
     } catch (error) {
       console.error("Exception when resolving missed check-in:", error);
+
+      // Revert the optimistic update if there was an error
+      if (missedCheckins) {
+        setLocalMissedCheckins(missedCheckins);
+      }
 
       // Show error toast with more details
       toast({
@@ -371,9 +381,9 @@ export default function MissedCheckInsAlert({
         <AlertTitle className="font-semibold">Missed Check-ins</AlertTitle>
         <AlertDescription className="mt-2">
           <p className="mb-2">
-            You have missed check-ins for {missedCheckins.length} habit
-            {missedCheckins.length > 1 ? "s" : ""}. Please address them within
-            the grace period to avoid failing.
+            You have missed check-ins for {localMissedCheckins.length} habit
+            {localMissedCheckins.length > 1 ? "s" : ""}. Please address them
+            within the grace period to avoid failing.
           </p>
 
           <div className="space-y-2 mt-3">
@@ -409,9 +419,9 @@ export default function MissedCheckInsAlert({
               );
             })}
 
-            {missedCheckins.length > 3 && (
+            {localMissedCheckins.length > 3 && (
               <p className="text-xs text-center mt-2">
-                And {missedCheckins.length - 3} more...
+                And {localMissedCheckins.length - 3} more...
               </p>
             )}
           </div>

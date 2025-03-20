@@ -53,9 +53,14 @@ import FailedHabitPayment from "./FailedHabitPayment";
 interface CheckInSectionProps {
   habit: Tables<"habits">;
   stake: Tables<"habit_stakes">;
+  onCheckInComplete?: () => void;
 }
 
-const CheckInSection: React.FC<CheckInSectionProps> = ({ habit, stake }) => {
+const CheckInSection: React.FC<CheckInSectionProps> = ({
+  habit,
+  stake,
+  onCheckInComplete,
+}) => {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [checkInDate, setCheckInDate] = useState<Date | null>(null);
@@ -194,16 +199,16 @@ const CheckInSection: React.FC<CheckInSectionProps> = ({ habit, stake }) => {
         setCheckInDate(nextCheckIn);
         setIsCheckInAvailable(
           isToday(nextCheckIn) ||
-          (habit.frequency_unit === "week" &&
-            isWithinInterval(today, {
-              start: startOfWeek(nextCheckIn, { weekStartsOn: 1 }),
-              end: endOfWeek(nextCheckIn, { weekStartsOn: 1 }),
-            })) ||
-          (habit.frequency_unit === "month" &&
-            isWithinInterval(today, {
-              start: startOfMonth(nextCheckIn),
-              end: endOfMonth(nextCheckIn),
-            }))
+            (habit.frequency_unit === "week" &&
+              isWithinInterval(today, {
+                start: startOfWeek(nextCheckIn, { weekStartsOn: 1 }),
+                end: endOfWeek(nextCheckIn, { weekStartsOn: 1 }),
+              })) ||
+            (habit.frequency_unit === "month" &&
+              isWithinInterval(today, {
+                start: startOfMonth(nextCheckIn),
+                end: endOfMonth(nextCheckIn),
+              }))
         );
       };
 
@@ -274,9 +279,56 @@ const CheckInSection: React.FC<CheckInSectionProps> = ({ habit, stake }) => {
     setIsSubmitting(true);
 
     try {
-      // Handle different verification types
-      let result;
+      // Pre-generate a temporary UUID for optimistic UI updates
+      const tempCheckInId = `temp-${Date.now()}-${Math.random()
+        .toString(36)
+        .substring(2, 9)}`;
+      const now = new Date();
 
+      // Create an optimistic check-in object
+      const optimisticCheckin = {
+        uuid: tempCheckInId,
+        habit_uuid: habit.uuid,
+        created_at: now.toISOString(),
+        completed: completed,
+        status: completed ? "true" : "false",
+        proof_type: verificationType || null,
+        proof_content: proofContent || null,
+        proof_verified: false,
+      };
+
+      // Show optimistic toast immediately for better UX
+      if (completed) {
+        toast({
+          title: "Check-in recorded!",
+          description: "Your check-in has been saved.",
+          variant: "default",
+        });
+
+        // Close dialog and show success UI immediately
+        setIsCheckInDialogOpen(false);
+        setShowSuccessDialog(true);
+      } else {
+        toast({
+          title: "Recording failure...",
+          description: "Your habit failure is being processed.",
+          variant: "default",
+        });
+
+        // Close dialog and show failure UI immediately
+        setIsCheckInDialogOpen(false);
+        setShowFailureDialog(false);
+      }
+
+      // Reset proof fields
+      setProofContent("");
+      setPhotoFile(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+
+      // In the background, make the actual API call
+      let result;
       if (verificationType === "photo" && completed && photoFile) {
         result = await checkInHabit(
           habit.uuid!,
@@ -306,47 +358,32 @@ const CheckInSection: React.FC<CheckInSectionProps> = ({ habit, stake }) => {
         );
       }
 
-      if (result.success) {
-        setIsCheckInDialogOpen(false);
-
-        if (completed) {
-          toast({
-            title: "Check-in successful!",
-            description:
-              "Your check-in has been recorded. Keep up the good work!",
-            variant: "default",
-          });
-        } else {
-          // If the habit failed due to user admitting failure
-          // Close the dialog
-          setShowFailureDialog(false);
-
-          // Just refresh the current page to show the updated UI
-          router.refresh();
-
-          // Show a toast notification
-          toast({
-            title: "Habit Failed",
-            description:
-              result.message ||
-              "Your habit has been marked as failed. Please complete the payment.",
-            variant: "destructive",
-          });
-        }
-
-        // Reset proof fields
-        setProofContent("");
-        setPhotoFile(null);
-        if (fileInputRef.current) {
-          fileInputRef.current.value = "";
-        }
-      } else {
+      // Handle the server response silently
+      if (!result.success) {
+        console.error("Error during check-in:", result.message);
         toast({
-          title: "Error",
+          title: "Check-in error",
           description:
-            result.message || "Failed to record check-in. Please try again.",
+            result.message ||
+            "An error occurred while saving your check-in. Please try again.",
           variant: "destructive",
         });
+      } else {
+        // For failure case, set forfeit data if available
+        if (!completed && result.forfeitAmount) {
+          setForfeitAmount(result.forfeitAmount);
+          if (result.message) {
+            setForfeitMessage(result.message);
+          }
+        }
+
+        // Always refresh data on success
+        // Wait a bit to allow server time to process the data
+        setTimeout(() => {
+          if (onCheckInComplete) {
+            onCheckInComplete();
+          }
+        }, 300);
       }
     } catch (error) {
       console.error("Error during check-in:", error);
@@ -355,6 +392,15 @@ const CheckInSection: React.FC<CheckInSectionProps> = ({ habit, stake }) => {
         description: "Failed to record check-in. Please try again.",
         variant: "destructive",
       });
+
+      // If we encounter an exception, refresh to ensure UI is in sync
+      setTimeout(() => {
+        if (onCheckInComplete) {
+          onCheckInComplete();
+        } else {
+          router.refresh();
+        }
+      }, 300);
     } finally {
       setIsSubmitting(false);
     }
@@ -366,9 +412,43 @@ const CheckInSection: React.FC<CheckInSectionProps> = ({ habit, stake }) => {
     setIsSubmittingMissed(true);
 
     try {
-      // Handle different verification types
-      let result;
+      // Pre-generate a temporary UUID for optimistic UI updates
+      const tempCheckInId = `temp-${Date.now()}-${Math.random()
+        .toString(36)
+        .substring(2, 9)}`;
 
+      // Create an optimistic check-in object
+      const optimisticCheckin = {
+        uuid: tempCheckInId,
+        habit_uuid: habit.uuid,
+        created_at: missedCheckIn.toISOString(),
+        completed: completed,
+        status: completed ? "true" : "false",
+        proof_type: verificationType || null,
+        proof_content: proofContent || null,
+        proof_verified: false,
+      };
+
+      // Show optimistic toast immediately for better UX
+      toast({
+        title: "Missed check-in recorded",
+        description: "Your missed check-in has been saved.",
+        variant: "default",
+      });
+
+      // Close dialog immediately
+      setShowMissedCheckInDialog(false);
+
+      // Reset form state
+      setProofContent("");
+      setPhotoFile(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+      setMissedCheckIn(null);
+
+      // In the background, make the actual API call
+      let result;
       if (verificationType === "photo" && completed && photoFile) {
         result = await checkInHabit(
           habit.uuid!,
@@ -398,53 +478,24 @@ const CheckInSection: React.FC<CheckInSectionProps> = ({ habit, stake }) => {
         );
       }
 
-      if (result.success) {
-        setShowMissedCheckInDialog(false);
-
-        if (completed) {
-          toast({
-            title: "Streak protected!",
-            description: `Your check-in for ${format(
-              missedCheckIn,
-              "MMMM d"
-            )} has been recorded. Your streak continues!`,
-            variant: "default",
-          });
-        } else {
-          // If the habit failed due to missed check-in
-          // Close the dialog
-          setShowFailureDialog(false);
-
-          // Just refresh the current page to show the updated UI
-          router.refresh();
-
-          // Show a toast notification
-          toast({
-            title: "Habit Failed",
-            description:
-              result.message ||
-              "Your habit has been marked as failed due to missed check-in. Please complete the payment.",
-            variant: "destructive",
-          });
-        }
-
-        // Reset proof fields
-        setProofContent("");
-        setPhotoFile(null);
-        if (fileInputRef.current) {
-          fileInputRef.current.value = "";
-        }
-
-        // Reset missed check-in
-        setMissedCheckIn(null);
-      } else {
+      // Handle the server response silently
+      if (!result.success) {
+        console.error("Error during missed check-in:", result.message);
         toast({
-          title: "Error",
+          title: "Check-in error",
           description:
             result.message ||
-            "Failed to record missed check-in. Please try again.",
+            "An error occurred while saving your missed check-in. Please try again.",
           variant: "destructive",
         });
+      } else {
+        // Always refresh data on success
+        // Wait a bit to allow server time to process the data
+        setTimeout(() => {
+          if (onCheckInComplete) {
+            onCheckInComplete();
+          }
+        }, 300);
       }
     } catch (error) {
       console.error("Error during missed check-in:", error);
@@ -453,6 +504,15 @@ const CheckInSection: React.FC<CheckInSectionProps> = ({ habit, stake }) => {
         description: "Failed to record missed check-in. Please try again.",
         variant: "destructive",
       });
+
+      // If we encounter an exception, refresh to ensure UI is in sync
+      setTimeout(() => {
+        if (onCheckInComplete) {
+          onCheckInComplete();
+        } else {
+          router.refresh();
+        }
+      }, 300);
     } finally {
       setIsSubmittingMissed(false);
     }
@@ -468,19 +528,21 @@ const CheckInSection: React.FC<CheckInSectionProps> = ({ habit, stake }) => {
       // Assuming the week starts on Monday
       const startOfWeekDate = startOfWeek(new Date(), { weekStartsOn: 1 });
       const endOfWeekDate = endOfWeek(new Date(), { weekStartsOn: 1 });
-      return `Did you complete your habit at least ${habit.frequency_value
-        } times this week (starting ${format(
-          startOfWeekDate,
-          "MMMM d"
-        )}, ending ${format(endOfWeekDate, "MMMM d")})?`;
+      return `Did you complete your habit at least ${
+        habit.frequency_value
+      } times this week (starting ${format(
+        startOfWeekDate,
+        "MMMM d"
+      )}, ending ${format(endOfWeekDate, "MMMM d")})?`;
     } else {
       const firstDayOfMonth = new Date(
         new Date().getFullYear(),
         new Date().getMonth(),
         1
       );
-      return `Did you complete your habit at least ${habit.frequency_value
-        } times this month (${format(firstDayOfMonth, "MMMM")})?`;
+      return `Did you complete your habit at least ${
+        habit.frequency_value
+      } times this month (${format(firstDayOfMonth, "MMMM")})?`;
     }
   };
 
@@ -596,6 +658,18 @@ const CheckInSection: React.FC<CheckInSectionProps> = ({ habit, stake }) => {
     return `You have ${checkInsRemaining} check-ins remaining for this ${habit.frequency_unit}.`;
   };
 
+  // Also update the success dialog's close handler
+  const handleSuccessDialogClose = () => {
+    setShowSuccessDialog(false);
+
+    // Refresh data after dialog is closed - add a slight delay
+    setTimeout(() => {
+      if (onCheckInComplete) {
+        onCheckInComplete();
+      }
+    }, 300);
+  };
+
   // If habit is failed, render the payment component
   if (isFailed) {
     return (
@@ -678,8 +752,8 @@ const CheckInSection: React.FC<CheckInSectionProps> = ({ habit, stake }) => {
                     {habit.frequency_unit === "day"
                       ? "Next check-in will be available tomorrow"
                       : habit.frequency_unit === "week"
-                        ? "Next check-in will be available next week"
-                        : "Next check-in will be available next month"}
+                      ? "Next check-in will be available next week"
+                      : "Next check-in will be available next month"}
                   </p>
                 </div>
               )}
@@ -696,50 +770,49 @@ const CheckInSection: React.FC<CheckInSectionProps> = ({ habit, stake }) => {
       )}
 
       {/* Check in dialog */}
-      <Dialog
-        open={isCheckInDialogOpen}
-        onOpenChange={setIsCheckInDialogOpen}
-      >
+      <Dialog open={isCheckInDialogOpen} onOpenChange={handleDialogChange}>
         <DialogContent className="sm:max-w-md max-w-[95vw] p-4 md:p-6">
           <DialogHeader>
-            <DialogTitle className="text-lg md:text-xl">Check in for {habit.name}</DialogTitle>
-            <DialogDescription className="text-xs md:text-sm">
-              {verificationType === "honor" && "Honor-based check-in"}
-              {verificationType === "photo" &&
-                "Photo verification required"}
-              {verificationType === "text" && "Text description required"}
+            <DialogTitle className="text-lg md:text-xl">
+              {habit.name}
+            </DialogTitle>
+            <DialogDescription className="text-xs md:text-sm mt-1">
+              Have you completed this habit?
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-3 md:space-y-4 py-2">
-            {/* Text proof */}
-            {(verificationType === "text" ||
-              verificationType === "honor") && (
-                <div className="space-y-2">
-                  <Label htmlFor="proof-content" className="text-sm md:text-base">
-                    {verificationType === "text"
-                      ? "Describe how you completed this habit"
-                      : "Notes (optional)"}
-                  </Label>
-                  <Textarea
-                    id="proof-content"
-                    placeholder={
-                      verificationType === "text"
-                        ? "Provide details about your activity..."
-                        : "Add any notes about today's habit..."
-                    }
-                    value={proofContent}
-                    onChange={(e) => setProofContent(e.target.value)}
-                    rows={3}
-                    className="text-sm"
-                  />
-                </div>
-              )}
+          <div className="space-y-4 py-3">
+            {/* Verification requirements based on type */}
+            {verificationType === "honor" && (
+              <div className="bg-muted/50 rounded-md p-3">
+                <p className="text-xs md:text-sm text-muted-foreground">
+                  This is an honor-based check-in. Simply confirm whether you've
+                  completed your habit.
+                </p>
+              </div>
+            )}
 
-            {/* Photo proof */}
+            {verificationType === "text" && (
+              <div className="space-y-2">
+                <Label htmlFor="proof-content" className="text-sm md:text-base">
+                  Describe how you completed this habit
+                </Label>
+                <Textarea
+                  id="proof-content"
+                  placeholder="Provide details about your activity..."
+                  value={proofContent}
+                  onChange={(e) => setProofContent(e.target.value)}
+                  rows={3}
+                  className="text-sm"
+                />
+              </div>
+            )}
+
             {verificationType === "photo" && (
               <div className="space-y-2">
-                <Label htmlFor="photo-proof" className="text-sm md:text-base">Upload a photo as proof</Label>
+                <Label htmlFor="photo-proof" className="text-sm md:text-base">
+                  Upload a photo as proof
+                </Label>
                 <div className="mt-2">
                   <div className="flex items-center gap-2">
                     <Button
@@ -788,26 +861,50 @@ const CheckInSection: React.FC<CheckInSectionProps> = ({ habit, stake }) => {
                 )}
               </div>
             )}
+
+            {/* Optional notes for honor-based check-ins */}
+            {verificationType === "honor" && (
+              <div className="space-y-2">
+                <Label htmlFor="proof-content" className="text-sm md:text-base">
+                  Notes (optional)
+                </Label>
+                <Textarea
+                  id="proof-content"
+                  placeholder="Add any notes about this habit completion..."
+                  value={proofContent}
+                  onChange={(e) => setProofContent(e.target.value)}
+                  rows={2}
+                  className="text-sm"
+                />
+              </div>
+            )}
           </div>
 
-          <DialogFooter className="flex sm:justify-between mt-2 md:mt-4">
+          <DialogFooter className="mt-2 md:mt-4 flex flex-col sm:flex-row gap-2 sm:justify-between">
             <Button
               type="button"
-              variant="ghost"
-              onClick={() => setIsCheckInDialogOpen(false)}
-              className="text-xs md:text-sm"
+              variant="destructive"
+              onClick={() => handleConfirmCheckIn(false)}
+              className="w-full sm:w-auto text-xs md:text-sm"
+              disabled={isSubmitting}
             >
-              Cancel
+              {isSubmitting ? (
+                <Loader2 className="h-3 md:h-4 w-3 md:w-4 animate-spin mr-1" />
+              ) : (
+                <XCircle className="h-3 md:h-4 w-3 md:w-4 mr-1" />
+              )}
+              No, I failed
             </Button>
             <Button
               type="button"
+              variant="default"
               disabled={
                 isSubmitting ||
                 (verificationType === "text" && !proofContent) ||
                 (verificationType === "photo" && !photoFile)
               }
               onClick={() => handleConfirmCheckIn(true)}
-              className="gap-1 text-xs md:text-sm"
+              className="w-full sm:w-auto gap-1 text-xs md:text-sm"
             >
               {isSubmitting ? (
                 <>
@@ -817,7 +914,7 @@ const CheckInSection: React.FC<CheckInSectionProps> = ({ habit, stake }) => {
               ) : (
                 <>
                   <Check className="h-3 md:h-4 w-3 md:w-4" />
-                  Complete Check-in
+                  Yes, I did
                 </>
               )}
             </Button>
@@ -826,7 +923,7 @@ const CheckInSection: React.FC<CheckInSectionProps> = ({ habit, stake }) => {
       </Dialog>
 
       {/* Success dialog */}
-      <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
+      <Dialog open={showSuccessDialog} onOpenChange={handleSuccessDialogClose}>
         <DialogContent className="sm:max-w-md max-w-[95vw] p-4 md:p-6">
           <div className="flex flex-col items-center justify-center py-4 md:py-6">
             <div className="rounded-full bg-green-100 p-2 md:p-3 mb-3 md:mb-4">
@@ -840,14 +937,11 @@ const CheckInSection: React.FC<CheckInSectionProps> = ({ habit, stake }) => {
               {checkInsRemaining === 0
                 ? " You've completed all your check-ins for this period!"
                 : checkInsRemaining === 1
-                  ? " You have 1 more check-in remaining for this period."
-                  : ` You have ${checkInsRemaining} more check-ins remaining for this period.`}
+                ? " You have 1 more check-in remaining for this period."
+                : ` You have ${checkInsRemaining} more check-ins remaining for this period.`}
             </p>
             <Button
-              onClick={() => {
-                setShowSuccessDialog(false);
-                router.refresh();
-              }}
+              onClick={handleSuccessDialogClose}
               className="text-xs md:text-sm"
             >
               Continue
@@ -863,10 +957,12 @@ const CheckInSection: React.FC<CheckInSectionProps> = ({ habit, stake }) => {
             <div className="rounded-full bg-red-100 p-2 md:p-3 mb-3 md:mb-4">
               <AlertCircle className="h-6 md:h-8 w-6 md:w-8 text-red-600" />
             </div>
-            <h2 className="text-lg md:text-xl font-semibold mb-2">Habit Has Failed</h2>
+            <h2 className="text-lg md:text-xl font-semibold mb-2">
+              Habit Has Failed
+            </h2>
             <p className="text-center text-xs md:text-sm text-muted-foreground mb-2">
-              Unfortunately, you missed a required check-in and your habit
-              has failed.
+              Unfortunately, you missed a required check-in and your habit has
+              failed.
             </p>
             {forfeitAmount && (
               <p className="text-center font-semibold text-xs md:text-sm text-red-600 mb-4 md:mb-6">
